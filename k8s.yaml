@@ -1,0 +1,67 @@
+# Cartas contra el Cliente en Kubernetes.
+# Cambia la imagen y el host del Ingress antes de aplicar:  kubectl apply -f k8s.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cartas-cliente
+  labels: { app: cartas-cliente }
+spec:
+  replicas: 1                 # las salas viven en memoria: una sola réplica
+  strategy: { type: Recreate }
+  selector:
+    matchLabels: { app: cartas-cliente }
+  template:
+    metadata:
+      labels: { app: cartas-cliente }
+    spec:
+      containers:
+        - name: web
+          image: registro.example.com/cartas-cliente:1.0.0
+          ports:
+            - { name: http, containerPort: 8080 }
+          readinessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 30
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { memory: 256Mi }
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cartas-cliente
+spec:
+  selector: { app: cartas-cliente }
+  ports:
+    - { name: http, port: 80, targetPort: http }
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cartas-cliente
+  annotations:
+    # WebSocket de larga duración (ingress-nginx)
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: cartas.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service: { name: cartas-cliente, port: { name: http } }
+  # tls:
+  #   - hosts: [cartas.example.com]
+  #     secretName: cartas-cliente-tls

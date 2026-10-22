@@ -1,0 +1,1714 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<!-- Dirección del servidor de salas. Vacío = el mismo servidor que sirve esta página (ws(s)://host/ws). -->
+<meta name="cxc-server" content="">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='7' y='3' width='19' height='25' rx='4' fill='%230D0E10' transform='rotate(-6 16 16)'/%3E%3C/svg%3E">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}</style>
+<title>Cartas contra el Cliente</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=Schibsted+Grotesk:wght@400..800&family=Martian+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: una mesa de juego. Móvil: una columna (carta negra, estado, mano). Escritorio: mesa + marcador lateral. */
+:root{
+  --bg:#E4E8ED; --surface:#F6F7F9; --fg:#101318; --muted:#56606D; --line:#C9D0D8;
+  --accent:#1F37D1; --accent-ink:#FFFFFF; --accent-soft:#D9DFFA;
+  --ok:#17744A; --warn:#8F5600;
+  /* Las cartas son objetos físicos: mismo color en los dos temas */
+  --card-w:#FFFFFF; --card-w-ink:#0F1114; --card-w-soft:#4A515B;
+  --card-b:#0D0E10; --card-b-ink:#F4F5F6;
+  --card-edge:rgba(16,22,32,.12); --marker:#FFE45C; --stamp:#C3122D;
+  --av-s:70%; --av-l:85%;
+  --shadow:0 1px 0 rgba(16,22,32,.05), 0 10px 24px -14px rgba(16,22,32,.45);
+  --f-display:"Bricolage Grotesque","Schibsted Grotesk",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+  --f-body:"Schibsted Grotesk",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+  --f-mono:"Martian Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D1014; --surface:#161A20; --fg:#E6E9ED; --muted:#98A2AE; --line:#2B323B;
+    --accent:#8A9CFF; --accent-ink:#0A0F24; --accent-soft:#1D2552;
+    --ok:#4CC58B; --warn:#E3A83E;
+    --card-edge:rgba(255,255,255,.16);
+    --av-s:36%; --av-l:32%;
+    --shadow:0 1px 0 rgba(0,0,0,.3), 0 12px 26px -14px rgba(0,0,0,.8);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D1014; --surface:#161A20; --fg:#E6E9ED; --muted:#98A2AE; --line:#2B323B;
+  --accent:#8A9CFF; --accent-ink:#0A0F24; --accent-soft:#1D2552;
+  --ok:#4CC58B; --warn:#E3A83E;
+  --card-edge:rgba(255,255,255,.16);
+  --av-s:36%; --av-l:32%;
+  --shadow:0 1px 0 rgba(0,0,0,.3), 0 12px 26px -14px rgba(0,0,0,.8);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{
+  background:var(--bg); color:var(--fg);
+  font:16px/1.45 var(--f-body);
+  padding-left:max(16px, env(safe-area-inset-left, 0px));
+  padding-right:max(16px, env(safe-area-inset-right, 0px));
+  padding-block:0 40px;
+}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:1100px;margin:0 auto}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;letter-spacing:-.01em}
+h2{font-size:20px;font-weight:700}
+h3{font-size:16px;font-weight:700}
+p{margin:0}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.label,.eyebrow{font:600 11px/1.2 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.hint{color:var(--muted);font-size:14px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px;display:grid;gap:10px;min-width:0}
+
+/* Botones */
+.btn{appearance:none;border:1px solid transparent;background:var(--accent);color:var(--accent-ink);font:700 16px/1 var(--f-body);padding:0 18px;min-height:46px;border-radius:12px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-align:center}
+.btn:hover{filter:brightness(1.06)}
+.btn:disabled{opacity:.45;cursor:not-allowed;filter:none}
+.btn.ghost{background:transparent;color:var(--fg);border-color:var(--line)}
+.btn.ghost:hover{border-color:var(--fg)}
+.btn.sm{min-height:36px;font-size:14px;padding:0 12px;border-radius:10px}
+.btn.big{min-height:56px;font-size:18px;width:100%}
+.btn.warn{background:transparent;color:var(--warn);border-color:currentColor}
+input,textarea{font:600 17px/1.3 var(--f-body);color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 14px;width:100%;min-width:0}
+input:focus,textarea:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px var(--accent-soft)}
+label{font-weight:700;font-size:14px}
+
+/* Cartas */
+.card{position:relative;display:block;border-radius:14px;padding:14px 14px 38px;font:700 17px/1.22 var(--f-body);letter-spacing:-.005em;text-align:left;box-shadow:var(--shadow);overflow-wrap:anywhere}
+.card.white{background:var(--card-w);color:var(--card-w-ink);border:1px solid var(--card-edge)}
+.card.black{background:var(--card-b);color:var(--card-b-ink);border:1px solid var(--card-edge)}
+.card .foot{position:absolute;left:14px;right:14px;bottom:12px;display:flex;justify-content:space-between;align-items:center;gap:8px;font:600 9px/1 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;opacity:.55}
+.card .foot .pick{opacity:1;border:1px solid currentColor;border-radius:99px;padding:4px 7px}
+.blank{display:inline-block;width:3.6em;height:.2em;background:currentColor;vertical-align:.18em;border-radius:2px;opacity:.9}
+.card mark{background:linear-gradient(transparent 12%, var(--marker) 12%, var(--marker) 92%, transparent 92%);color:var(--card-w-ink);padding:0 .12em;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.bigblack{font-size:clamp(21px,5.4vw,30px);line-height:1.18;min-height:200px;max-width:560px;padding:20px 20px 46px}
+.bigblack .foot{left:20px;right:20px;bottom:16px}
+
+/* Inicio */
+.hero{display:grid;gap:22px;padding-block:28px 8px;align-items:center}
+.hero-cards{position:relative;width:100%;max-width:440px;aspect-ratio:1/1.04}
+.hero-cards .card{position:absolute;aspect-ratio:5/6;max-width:100%}
+.hero-cards .heroblack{left:2%;top:1%;width:64%;transform:rotate(-3deg);padding:20px;z-index:2}
+.hero-cards .tilt{right:2%;bottom:1%;width:56%;transform:rotate(6deg);z-index:1;display:flex;flex-direction:column;justify-content:flex-end;font-size:clamp(14px,3.6vw,18px);padding-bottom:40px}
+.wordmark{font:800 clamp(34px,9.5vw,54px)/.95 var(--f-display);letter-spacing:-.035em}
+.wordmark em{font-style:normal;display:block;font-weight:600;font-size:.62em;letter-spacing:-.02em;margin-block:.12em}
+.lead{font-size:clamp(17px,2.4vw,19px);max-width:46ch;color:var(--fg)}
+.lead + .hint{margin-top:8px}
+.home-grid{display:grid;gap:14px;margin-top:18px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{appearance:none;border:1px solid var(--line);background:transparent;color:var(--fg);border-radius:99px;padding:7px 12px;font:600 14px/1 var(--f-body);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.two{display:grid;gap:14px}
+.join-row{display:flex;gap:8px}
+.join-row input{font:600 22px/1 var(--f-mono);letter-spacing:.3em;text-transform:uppercase;text-align:center}
+.join-row .btn{flex:none}
+.err{color:var(--warn);font-weight:700}
+.notice{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--warn);border-radius:12px;padding:12px 14px}
+.open-list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.open-list li{display:flex;align-items:center;gap:12px;border-top:1px solid var(--line);padding-top:8px}
+.open-list li:first-child{border-top:0;padding-top:0}
+.open-list .who{flex:1;min-width:0}
+.code-sm{font:600 15px/1 var(--f-mono);letter-spacing:.18em}
+details.rules{margin-top:22px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 16px}
+details.rules summary{cursor:pointer;font:700 17px/1.3 var(--f-display)}
+details.rules ol{padding-left:22px;margin:12px 0 0;display:grid;gap:6px;max-width:68ch}
+details.rules p{margin-top:10px;max-width:68ch}
+
+/* Partida */
+.topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:10px;padding-block:10px;margin-bottom:16px}
+.tb-left{display:grid;gap:2px;min-width:0}
+.tb-brand{font:800 15px/1.1 var(--f-display);letter-spacing:-.02em}
+.tb-phase{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tb-right{display:flex;gap:8px;align-items:center;flex:none}
+.code-chip{appearance:none;border:1px dashed var(--muted);background:transparent;color:var(--fg);border-radius:10px;min-height:36px;padding:0 10px;font:600 14px/1 var(--f-mono);letter-spacing:.2em;cursor:pointer}
+.table{display:grid;gap:18px;align-items:start}
+.main{display:grid;gap:16px;min-width:0}
+.roundline{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:baseline;margin-bottom:10px}
+.roundline .r{font:600 12px/1 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.status{display:grid;gap:6px}
+.status .big{font:700 19px/1.3 var(--f-display)}
+.pending{color:var(--muted);font-size:14px}
+.hand{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:12px}
+button.card{appearance:none;cursor:pointer;width:100%;min-height:132px;font-size:15.5px;transition:transform .14s ease, box-shadow .14s ease, outline-color .14s ease}
+button.card:hover{transform:translateY(-2px)}
+button.card[aria-pressed="true"]{transform:translateY(-5px);outline:3px solid var(--accent);outline-offset:3px}
+button.card:disabled{cursor:default;transform:none}
+.badge{position:absolute;top:-10px;right:-8px;width:28px;height:28px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font:700 13px/28px var(--f-mono);text-align:center}
+.card.blankcard{background:var(--card-w);color:var(--card-w-ink);border:2px dashed #8A919B;box-shadow:none}
+.card.blankcard small{display:block;margin-top:6px;font:500 13px/1.3 var(--f-body);color:var(--card-w-soft)}
+.blankbox{display:grid;gap:6px}
+.blankbox .count{font:600 11px/1 var(--f-mono);color:var(--muted);justify-self:end}
+.preview{display:grid;gap:6px}
+.preview .card{min-height:0;font-size:17px;padding-bottom:16px}
+.send-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.send-row .btn:first-child{flex:1 1 220px}
+.subs{display:grid;gap:12px;list-style:none;margin:0;padding:0}
+.subs .card{min-height:0;font-size:17px;padding-bottom:16px}
+.subs button.card.sel{outline:3px solid var(--accent);outline-offset:3px}
+.subs .card .who{display:block;margin-top:8px;font:600 11px/1 var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--card-w-soft)}
+.winner{display:grid;gap:12px}
+.wincard{font-size:clamp(19px,4.6vw,24px);padding:22px 20px 22px;min-height:0}
+.stamp{position:absolute;right:14px;top:-14px;font:600 15px/1 var(--f-mono);letter-spacing:.16em;text-transform:uppercase;color:var(--stamp);background:var(--card-w);border:3px solid currentColor;border-radius:8px;padding:7px 10px 6px;transform:rotate(-9deg);animation:stamp .5s cubic-bezier(.2,.9,.3,1.35) both}
+@keyframes stamp{from{transform:rotate(-9deg) scale(2.4);opacity:0}to{transform:rotate(-9deg) scale(1);opacity:1}}
+.win-line{font:700 20px/1.3 var(--f-display)}
+.countdown{height:4px;background:var(--line);border-radius:4px;overflow:hidden}
+.countdown span{display:block;height:100%;background:var(--accent);transform-origin:left;animation:cd 9s linear forwards}
+@keyframes cd{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+.codebox{display:grid;gap:10px;justify-items:start}
+.code{display:flex;gap:8px}
+.code span{font:600 clamp(34px,10vw,52px)/1 var(--f-mono);width:1.25em;height:1.5em;display:grid;place-items:center;background:var(--card-b);color:var(--card-b-ink);border-radius:10px;border:1px solid var(--card-edge)}
+.pchips{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
+.pchips li{display:flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:99px;padding:7px 12px;font-weight:700;background:var(--bg)}
+.pchips li.me{border-color:var(--accent)}
+.tag{font:600 10px/1 var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line);border-radius:99px;padding:3px 6px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--line);flex:none}
+.dot.on{background:var(--ok)}
+.seg{display:grid;gap:6px}
+.seg .opts{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{appearance:none;min-width:48px;min-height:40px;border:1px solid var(--line);background:transparent;color:var(--fg);border-radius:10px;font:700 15px/1 var(--f-mono);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.hostbar{border:1px dashed var(--muted);border-radius:16px;padding:12px 14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.hostbar .label{flex-basis:100%}
+.champ{font:800 clamp(28px,7vw,44px)/1.02 var(--f-display);letter-spacing:-.03em}
+.rank{list-style:none;margin:0;padding:0;display:grid}
+.rank li{display:flex;justify-content:space-between;gap:12px;padding:10px 2px;border-top:1px solid var(--line);font-weight:700}
+.rank li:first-child{border-top:0}
+.rank .pts{font:600 15px/1 var(--f-mono);font-variant-numeric:tabular-nums}
+aside.board{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;display:grid;gap:10px;min-width:0}
+.board ol{list-style:none;margin:0;padding:0;display:grid}
+.board li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line)}
+.board li:first-child{border-top:0}
+.board .nm{font-weight:700;min-width:0;overflow-wrap:anywhere}
+.board .sub{display:block;font-size:12px;color:var(--muted);font-weight:500}
+.board .pts{font:600 18px/1 var(--f-mono);font-variant-numeric:tabular-nums}
+.board li.off .nm{color:var(--muted)}
+.cztag{margin-left:8px;font:600 10px/1 var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--card-b-ink);background:var(--card-b);border:1px solid var(--card-edge);border-radius:99px;padding:3px 7px;vertical-align:2px}
+.linkbtn{appearance:none;background:none;border:0;color:var(--accent);font:700 13px/1 var(--f-body);cursor:pointer;padding:4px 0;text-decoration:underline}
+#toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:12px;font-weight:700;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s;max-width:calc(100% - 32px);z-index:20}
+#toast.on{opacity:1}
+
+/* Avatares */
+.av{--h:220;display:inline-grid;place-items:center;flex:none;width:28px;height:28px;border-radius:50%;background:hsl(var(--h) var(--av-s) var(--av-l));color:var(--fg);font:700 12px/1 var(--f-body);letter-spacing:-.02em;overflow:hidden;white-space:nowrap;vertical-align:middle}
+.av.xs{width:20px;height:20px;font-size:9px}
+.av.md{width:40px;height:40px;font-size:16px}
+.av.xl{width:64px;height:64px;font-size:26px}
+.av.emo{font-size:16px}.av.xs.emo{font-size:12px}.av.md.emo{font-size:23px}.av.xl.emo{font-size:36px}
+.off .av{opacity:.45;filter:grayscale(1)}
+.who-row{display:flex;gap:14px;align-items:center}
+.who-fields{display:grid;gap:6px;flex:1;min-width:0}
+.av-row{display:flex;gap:8px}
+.av-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(44px,1fr));gap:6px}
+.av-grid button{appearance:none;height:44px;border:1px solid var(--line);border-radius:12px;background:transparent;font-size:22px;line-height:1;cursor:pointer}
+.av-grid button[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.win-line{display:flex;align-items:center;gap:10px}
+.subs .card .who{display:flex;align-items:center;gap:6px}
+.rank li > span:first-child,.demo-board .dn{display:flex;align-items:center;gap:10px;min-width:0}
+.champ-av{display:flex;gap:8px;margin-bottom:12px}
+
+/* Idiomas */
+.langs{display:inline-flex;border:1px solid var(--line);border-radius:99px;padding:3px;gap:2px;background:var(--surface)}
+.langs button{appearance:none;border:0;background:transparent;color:var(--muted);font:600 12px/1 var(--f-mono);letter-spacing:.06em;padding:0 10px;min-height:32px;border-radius:99px;cursor:pointer}
+.langs button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+.home-top{display:flex;justify-content:flex-end;padding-top:14px}
+.home-top + .hero{padding-top:10px}
+.game-foot{display:flex;justify-content:center;padding-top:20px}
+.demo-ctrl .langs{margin-left:auto}
+
+/* Demo */
+.hero-actions{margin-top:14px;display:flex;flex-wrap:wrap;gap:10px}
+.demo{display:grid;gap:14px}
+.demo .topbar{margin-bottom:0}
+.demo-cap{font:700 clamp(18px,4.6vw,22px)/1.3 var(--f-display);min-height:2.7em;max-width:42ch;text-wrap:balance}
+.demo-stage{display:grid;gap:14px;align-content:start;min-height:360px;max-width:640px}
+.demo-who{display:flex;align-items:center;gap:8px;font:600 11px/1.2 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.demo-who::before{content:"";width:11px;height:18px;border:2px solid currentColor;border-radius:3px;flex:none}
+.demo-hand .card{min-height:112px;font-size:15px}
+.card.is-sel{transform:translateY(-5px);outline:3px solid var(--accent);outline-offset:3px}
+.tap{position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;background:var(--accent);pointer-events:none;opacity:0;animation:tap 1s ease-out .25s both}
+@keyframes tap{0%{opacity:.6;transform:scale(.35)}100%{opacity:0;transform:scale(1.7)}}
+.pop{animation:pop .42s cubic-bezier(.2,.8,.3,1.15) both;animation-delay:var(--d,0ms)}
+@keyframes pop{from{opacity:0;transform:translateY(12px) scale(.97)}to{opacity:1;transform:none}}
+.demo-fake{pointer-events:none}
+.demo-ticks{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.demo-ticks li{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-weight:700}
+.demo-ticks .ok{margin-left:auto;font-weight:500;font-size:14px;color:var(--ok)}
+.demo-board{list-style:none;margin:0;padding:14px 16px;display:grid;background:var(--surface);border:1px solid var(--line);border-radius:16px}
+.demo-board li{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-top:1px solid var(--line);font-weight:700}
+.demo-board li:first-child{border-top:0}
+.demo-board .pts{font:600 17px/1 var(--f-mono);font-variant-numeric:tabular-nums}
+.demo-board li.bump .pts{color:var(--accent);animation:bump .6s ease .5s both}
+@keyframes bump{0%{transform:scale(1)}40%{transform:scale(1.6)}100%{transform:scale(1)}}
+.demo-input{border:1px solid var(--accent);box-shadow:0 0 0 3px var(--accent-soft);border-radius:12px;padding:12px 14px;font:600 17px/1.3 var(--f-body);min-height:50px;background:var(--bg)}
+.caret{display:inline-block;width:2px;height:1.1em;background:var(--fg);vertical-align:-.18em;margin-left:1px;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.demo-skip{font:800 clamp(28px,7vw,42px)/1 var(--f-display);letter-spacing:-.02em;color:var(--muted)}
+.demo-prog{height:4px;background:var(--line);border-radius:4px;overflow:hidden}
+.demo-prog span{display:block;height:100%;background:var(--accent);transform-origin:left;animation:fillbar var(--dur,4s) linear forwards}
+@keyframes fillbar{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.demo.paused .demo-prog span{animation-play-state:paused}
+.demo-ctrl{position:sticky;bottom:0;display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--bg);border-top:1px solid var(--line);padding-block:10px calc(10px + env(safe-area-inset-bottom,0px))}
+.demo-ctrl #demoPlay{min-width:96px}
+
+@media (min-width:760px){
+  .hero{grid-template-columns:minmax(0,1fr) minmax(0,1fr);padding-top:44px}
+  .two{grid-template-columns:1fr 1fr}
+}
+@media (min-width:920px){
+  .table{grid-template-columns:minmax(0,1fr) 300px}
+  aside.board{position:sticky;top:calc(env(safe-area-inset-top,0px) + 76px)}
+  .table.solo{grid-template-columns:minmax(0,1fr)}
+}
+@media (prefers-reduced-motion: reduce){
+  *{transition:none!important}
+  .stamp{animation:none}
+  .countdown span{animation:none;transform:scaleX(.5)}
+  .pop,.demo-board li.bump .pts,.caret{animation:none}
+  .tap{display:none}
+  .demo-prog span{animation:none;transform:scaleX(1)}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <section id="home">
+    <div class="home-top"><div class="langs" role="group" aria-label="Idioma" data-langs></div></div>
+    <div class="hero">
+      <div class="hero-cards">
+        <div class="card white tilt" aria-hidden="true"><span id="heroCard">Un PoC que lleva tres años en producción.</span><span class="foot"><span data-i18n="brand">Cartas contra el Cliente</span></span></div>
+        <div class="card black heroblack">
+          <h1 class="wordmark" data-i18n-html="wordmark">Cartas <em>contra el</em> Cliente.</h1>
+          <span class="foot"><span>AI &amp; Data Ops</span><span data-i18n="edition">Edición equipo</span></span>
+        </div>
+      </div>
+      <div>
+        <p class="lead" data-i18n="lead">El juego de cartas del equipo. En cada ronda alguien hace de cliente y el resto le vende la mejor respuesta.</p>
+        <p class="hint" data-i18n="leadHint">Hasta 20 personas en la misma sala, cada una desde su móvil o su portátil.</p>
+        <div class="hero-actions"><button type="button" id="demoBtn" class="btn ghost" data-act="demo-open" data-i18n="demoBtn">Ver una partida de ejemplo</button></div>
+      </div>
+    </div>
+
+    <div id="noRoom" class="notice" hidden data-i18n="noRoom">Para jugar, abre esta página dentro de Claude con tu cuenta iniciada.</div>
+
+    <div id="homeForms" class="home-grid">
+      <div class="panel">
+        <div class="who-row">
+          <span id="avPreview" class="av xl" aria-hidden="true">?</span>
+          <div class="who-fields">
+            <label for="nameIn" data-i18n="nameLabel">Tu nombre en la partida</label>
+            <input id="nameIn" maxlength="16" autocomplete="nickname" placeholder="Por ejemplo, Vane" data-i18n-ph="namePh">
+          </div>
+        </div>
+        <div class="chips" id="nameChips" aria-label="Nombres del equipo" data-i18n-aria="teamNames"></div>
+        <label for="avIn" data-i18n="avLabel">Tu avatar</label>
+        <div class="av-row">
+          <input id="avIn" maxlength="16" autocomplete="off" spellcheck="false" placeholder="Escribe un emoji o tus iniciales" data-i18n-ph="avPh">
+          <button type="button" class="btn ghost sm" data-act="av-clear" data-i18n="avClear">Iniciales</button>
+        </div>
+        <div class="av-grid" id="avGrid" aria-label="Avatares sugeridos" data-i18n-aria="avSuggest"></div>
+      </div>
+      <div class="two">
+        <div class="panel">
+          <h2 data-i18n="createTitle">Crear una sala</h2>
+          <p class="hint" data-i18n="createHint">Te da un código de cuatro letras para compartir con el resto.</p>
+          <button id="createBtn" class="btn" type="button" data-i18n="createBtn">Crear sala</button>
+        </div>
+        <div class="panel">
+          <h2 data-i18n="joinTitle">Entrar con código</h2>
+          <label for="codeIn" class="sr-only" data-i18n="codeLabel">Código de sala</label>
+          <div class="join-row">
+            <input id="codeIn" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCD">
+            <button id="joinBtn" class="btn" type="button" data-i18n="joinBtn">Entrar</button>
+          </div>
+        </div>
+      </div>
+      <p id="homeErr" class="err" role="alert" hidden></p>
+      <button id="resumeBtn" class="btn ghost" type="button" hidden></button>
+      <div id="openWrap" class="panel" hidden>
+        <h2 data-i18n="openTitle">Salas abiertas ahora</h2>
+        <ul id="openList" class="open-list"></ul>
+      </div>
+    </div>
+
+    <details class="rules" id="rules">
+      <summary data-i18n="rulesTitle">Cómo se juega</summary>
+      <ol>
+        <li data-i18n-html="rule1"></li>
+        <li data-i18n-html="rule2"></li>
+        <li data-i18n-html="rule3"></li>
+        <li data-i18n-html="rule4"></li>
+        <li data-i18n-html="rule5"></li>
+      </ol>
+      <p data-i18n-html="ruleBlank"></p>
+      <p data-i18n-html="ruleRemo"></p>
+    </details>
+  </section>
+
+  <section id="game" hidden>
+    <header class="topbar">
+      <div class="tb-left">
+        <span class="tb-brand" data-i18n="brand">Cartas contra el Cliente</span>
+        <span id="tbPhase" class="tb-phase"></span>
+      </div>
+      <div class="tb-right">
+        <button id="tbCode" class="code-chip" type="button" data-act="copy" aria-label="Copiar código de sala" data-i18n-aria="copyAria"></button>
+        <button id="leaveBtn" class="btn ghost sm" type="button" data-i18n="leave">Salir</button>
+      </div>
+    </header>
+    <p id="gameMsg" class="notice" hidden></p>
+    <div class="table" id="tableEl">
+      <div class="main">
+        <div id="lobbyV" class="main" hidden></div>
+        <div id="playV" class="main" hidden>
+          <div id="stage"></div>
+          <div id="status" class="status"></div>
+          <div id="handBox" class="main">
+            <div id="hand" class="hand"></div>
+            <div id="blankBox" class="blankbox" hidden>
+              <label for="blankIn" data-i18n="blankLabel">Tu respuesta en la carta en blanco</label>
+              <textarea id="blankIn" rows="2" maxlength="60" placeholder="Escribe algo que el cliente no pueda rechazar" data-i18n-ph="blankPh"></textarea>
+              <span id="blankCount" class="count">0/60</span>
+            </div>
+            <div id="preview" class="preview"></div>
+            <div class="send-row">
+              <button id="sendBtn" class="btn big" type="button" disabled data-i18n="sendBtn">Enviar al cliente</button>
+              <button id="remoBtn" class="btn ghost" type="button" hidden></button>
+            </div>
+          </div>
+        </div>
+        <div id="judgeV" class="main" hidden></div>
+        <div id="resV" class="main" hidden></div>
+        <div id="endV" class="main" hidden></div>
+        <div id="hostBar" class="hostbar" hidden></div>
+      </div>
+      <aside class="board" id="boardBox" hidden>
+        <h2 data-i18n="board">Marcador</h2>
+        <ol id="board"></ol>
+      </aside>
+    </div>
+    <div class="game-foot"><div class="langs" role="group" aria-label="Idioma" data-langs></div></div>
+  </section>
+
+  <section id="demo" class="demo" hidden aria-labelledby="demoTitle">
+    <header class="topbar">
+      <div class="tb-left">
+        <span class="tb-brand" id="demoTitle" tabindex="-1" data-i18n="demoTitle">Partida de ejemplo</span>
+        <span id="demoCount" class="tb-phase"></span>
+      </div>
+      <div class="tb-right"><button type="button" class="btn ghost sm" data-act="demo-close" data-i18n="close">Cerrar</button></div>
+    </header>
+    <div class="demo-prog" id="demoProg"></div>
+    <p class="demo-cap" id="demoCap" aria-live="polite"></p>
+    <div class="demo-stage demo-fake" id="demoStage"></div>
+    <div class="demo-end" id="demoEnd" hidden>
+      <div class="send-row">
+        <button type="button" class="btn" data-act="demo-restart" data-i18n="again">Ver otra vez</button>
+        <button type="button" class="btn ghost" data-act="demo-close" data-i18n="goPlay">Ir a jugar</button>
+      </div>
+    </div>
+    <div class="demo-ctrl">
+      <button type="button" class="btn ghost sm" data-act="demo-prev" data-i18n="prev">Anterior</button>
+      <button type="button" class="btn sm" id="demoPlay" data-act="demo-toggle">Pausa</button>
+      <button type="button" class="btn ghost sm" data-act="demo-next" data-i18n="next">Siguiente</button>
+      <div class="langs" role="group" aria-label="Idioma" data-langs></div>
+    </div>
+  </section>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+"use strict";
+/* ---------- Mazo: [español, galego, português] ---------- */
+const NAMES = ["Jorge","Sergio","María","Alex","Vane","Santi Suárez","Santiago Barca","Marcos","João","Jose","Ricardo","Francisco","Brais","Diego","David","Jesús"];
+const BLACK_T = [
+["El cliente ha rechazado la entrega por culpa de ___.", "O cliente rexeitou a entrega por culpa de ___.", "O cliente rejeitou a entrega por culpa de ___."],
+["Lo que de verdad se habló en el kick-off fue ___.", "O que de verdade se falou no kick-off foi ___.", "O que se falou mesmo no kick-off foi ___."],
+["El comercial le ha prometido al cliente ___.", "O comercial prometeulle ao cliente ___.", "O comercial prometeu ao cliente ___."],
+["La oferta decía \"PoC de 3 meses\". Ahora es ___.", "A oferta dicía \"PoC de 3 meses\". Agora é ___.", "A proposta dizia \"PoC de 3 meses\". Agora é ___."],
+["\"Pequeño cambio de alcance\": ___.", "\"Pequeno cambio de alcance\": ___.", "\"Pequena alteração de âmbito\": ___."],
+["Por fin han llegado los datos del cliente. Son ___.", "Por fin chegaron os datos do cliente. Son ___.", "Finalmente chegaram os dados do cliente. São ___."],
+["En la demo con dirección falló ___.", "Na demo coa dirección fallou ___.", "Na demo para a administração falhou ___."],
+["El acceso a los sistemas del cliente llegará cuando ___.", "O acceso aos sistemas do cliente chegará cando ___.", "O acesso aos sistemas do cliente vai chegar quando ___."],
+["¿Qué hay en la pestaña 14 del Excel del cliente? ___.", "Que hai na lapela 14 do Excel do cliente? ___.", "O que há no separador 14 do Excel do cliente? ___."],
+["Lo que no entraba en el presupuesto: ___.", "O que non entraba no orzamento: ___.", "O que não estava no orçamento: ___."],
+["El cliente pregunta si no se podría hacer con ___.", "O cliente pregunta se non se podería facer con ___.", "O cliente pergunta se não dava para fazer com ___."],
+["Requisito que llegó el día antes de la entrega: ___.", "Requisito que chegou o día antes da entrega: ___.", "Requisito que chegou na véspera da entrega: ___."],
+["Cláusula del contrato que nadie leyó: ___.", "Cláusula do contrato que ninguén leu: ___.", "Cláusula do contrato que ninguém leu: ___."],
+["El NDA nos impide hablar de ___.", "O NDA impídenos falar de ___.", "O NDA impede-nos de falar de ___."],
+["Lo único que sobrevivió a la integración con su sistema: ___.", "O único que sobreviviu á integración co seu sistema: ___.", "A única coisa que sobreviveu à integração com o sistema deles: ___."],
+["El cliente ha mandado un correo a las 23:47. Asunto: ___.", "O cliente mandou un correo ás 23:47. Asunto: ___.", "O cliente mandou um email às 23:47. Assunto: ___."],
+["Feedback tras la demo: \"Muy bien, pero ¿podría tener ___?\"", "Feedback despois da demo: \"Moi ben, pero podería ter ___?\"", "Feedback depois da demo: \"Muito bem, mas podia ter ___?\""],
+["Nuevo KPI del proyecto: ___.", "Novo KPI do proxecto: ___.", "Novo KPI do projeto: ___."],
+["La reunión de seguimiento se alargó dos horas por culpa de ___.", "A reunión de seguimento alongouse dúas horas por culpa de ___.", "A reunião de acompanhamento durou mais duas horas por culpa de ___."],
+["Lo que pone en la letra pequeña de la oferta: ___.", "O que pon na letra pequena da oferta: ___.", "O que diz nas letras pequenas da proposta: ___."],
+["Para dar el proyecto por cerrado, el cliente exige ___.", "Para dar o proxecto por pechado, o cliente esixe ___.", "Para dar o projeto por fechado, o cliente exige ___."],
+["El cliente ya tenía un proveedor para eso: ___.", "O cliente xa tiña un provedor para iso: ___.", "O cliente já tinha um fornecedor para isso: ___."],
+["¿Por qué se ha caído producción un viernes a las 18:00? ___.", "Por que caeu produción un venres ás 18:00? ___.", "Porque é que produção foi abaixo numa sexta às 18:00? ___."],
+["¿Qué hay realmente dentro del clúster de Kubernetes? ___.", "Que hai realmente dentro do clúster de Kubernetes? ___.", "O que há realmente dentro do cluster de Kubernetes? ___."],
+["El modelo ha aprendido a predecir ___.", "O modelo aprendeu a predicir ___.", "O modelo aprendeu a prever ___."],
+["¿Qué pidió el LLM a cambio de funcionar en producción? ___.", "Que pediu o LLM a cambio de funcionar en produción? ___.", "O que é que o LLM pediu em troca de funcionar em produção? ___."],
+["La política de uso del conector prohíbe expresamente ___.", "A política de uso do conector prohibe expresamente ___.", "A política de utilização do conector proíbe expressamente ___."],
+["Lo que apareció al limpiar los datos: ___.", "O que apareceu ao limpar os datos: ___.", "O que apareceu ao limpar os dados: ___."],
+["El agente de IA ha tomado una decisión autónoma: ___.", "O axente de IA tomou unha decisión autónoma: ___.", "O agente de IA tomou uma decisão autónoma: ___."],
+["El pipeline lleva tres días procesando ___.", "O pipeline leva tres días procesando ___.", "O pipeline está há três dias a processar ___."],
+["Nuevo dataset en el espacio de datos: ___.", "Novo dataset no espazo de datos: ___.", "Novo dataset no espaço de dados: ___."],
+["El modelo funciona perfectamente, salvo por ___.", "O modelo funciona perfectamente, agás por ___.", "O modelo funciona na perfeição, exceto por ___."],
+["Causa raíz de la incidencia, según el postmortem: ___.", "Causa raíz da incidencia, segundo o postmortem: ___.", "Causa raiz do incidente, segundo o postmortem: ___."],
+["Diego ha creado una nueva línea de negocio: ___Ops.", "Diego creou unha nova liña de negocio: ___Ops.", "O Diego criou uma nova linha de negócio: ___Ops."],
+["Santi ha empezado esta mañana un proyecto con un cliente sobre ___.", "Santi comezou esta mañá un proxecto cun cliente sobre ___.", "O Santi começou esta manhã um projeto com um cliente sobre ___."],
+["Lo que ha pescado Santi este fin de semana: ___.", "O que pescou Santi esta fin de semana: ___.", "O que o Santi pescou este fim de semana: ___."],
+["El chisme de la semana, según María: ___.", "A rexouba da semana, segundo María: ___.", "A coscuvilhice da semana, segundo a María: ___."],
+["María, como buena monitora de campamento, ha organizado ___.", "María, como boa monitora de campamento, organizou ___.", "A María, como boa monitora de campo de férias, organizou ___."],
+["Vane ha abierto un ticket urgente: ___.", "Vane abriu un ticket urxente: ___.", "A Vane abriu um ticket urgente: ___."],
+["Estado del ticket: bloqueado por ___.", "Estado do ticket: bloqueado por ___.", "Estado do ticket: bloqueado por ___."],
+["David responde a la incidencia del cliente con ___.", "David responde á incidencia do cliente con ___.", "O David responde ao incidente do cliente com ___."],
+["Santiago Barca ha bautizado el nuevo bug como ___.", "Santiago Barca bautizou o novo bug como ___.", "O Santiago Barca batizou o novo bug como ___."],
+["Marcos casi lo termina, pero se interpuso ___.", "Marcos case o remata, pero interpúxose ___.", "O Marcos quase acabava, mas meteu-se pelo meio ___."],
+["En la cena de Navidad, Jose y Ricardo cantarán a dúo ___.", "Na cea de Nadal, Jose e Ricardo cantarán a dúo ___.", "No jantar de Natal, o Jose e o Ricardo vão cantar em dueto ___."],
+["João llegó a la reunión con el cliente en 12 minutos gracias a ___.", "João chegou á reunión co cliente en 12 minutos grazas a ___.", "O João chegou à reunião com o cliente em 12 minutos graças a ___."],
+["Jorge ha hecho un muscle up para celebrar ___.", "Jorge fixo un muscle up para celebrar ___.", "O Jorge fez um muscle up para celebrar ___."],
+["Sergio ha puesto el himno del Oviedo porque ___.", "Sergio puxo o himno do Oviedo porque ___.", "O Sergio pôs o hino do Oviedo porque ___."],
+["Alex no estará disponible: se ha ido en kayak con ___.", "Alex non estará dispoñible: foise en kaiak con ___.", "Alex não vai estar disponível: foi de caiaque com ___."],
+["Brais dice que este proyecto hay que podarlo: sobra ___.", "Brais di que este proxecto hai que podalo: sobra ___.", "O Brais diz que este projeto tem de ser podado: sobra ___."],
+["Jesús ha montado un sarao para celebrar ___.", "Jesús montou un sarao para celebrar ___.", "O Jesús montou uma festarola para celebrar ___."],
+["Hoy María y Jesús se están picando por culpa de ___.", "Hoxe María e Jesús están a picarse por culpa de ___.", "Hoje a María e o Jesús estão a picar-se por causa de ___."],
+["Lo que Jesús le ha añadido a la web del cliente sin que nadie se lo pida: ___.", "O que Jesús lle engadiu á web do cliente sen que ninguén llo pida: ___.", "O que o Jesús acrescentou ao site do cliente sem ninguém pedir: ___."],
+["Para el próximo sarao, Jesús trae ___ y María trae ___.", "Para o próximo sarao, Jesús trae ___ e María trae ___.", "Para a próxima festarola, o Jesús leva ___ e a María leva ___."],
+["Lo que pasa en la ofi los jueves: ___.", "O que pasa na ofi os xoves: ___.", "O que acontece no escritório às quintas: ___."],
+["Si hemos ido a la ofi un lunes, es por culpa de ___.", "Se fomos á ofi un luns, é por culpa de ___.", "Se fomos ao escritório numa segunda, a culpa é de ___."],
+["En Portugal es una hora menos, así que ___.", "En Portugal é unha hora menos, así que ___.", "Em Portugal é menos uma hora, por isso ___."],
+["Lo que se ve detrás de tu cámara en remoto: ___.", "O que se ve detrás da túa cámara en remoto: ___.", "O que se vê atrás da tua câmara em teletrabalho: ___."],
+["Excusa para no encender la cámara: ___.", "Escusa para non acender a cámara: ___.", "Desculpa para não ligar a câmara: ___."],
+["Lo mejor del coworking de Portugal: ___.", "O mellor do coworking de Portugal: ___.", "O melhor do coworking em Portugal: ___."],
+["El chat del equipo está lleno de ___.", "O chat do equipo está cheo de ___.", "O chat da equipa está cheio de ___."],
+["Lo que se dice en la ofi y nunca en la videollamada: ___.", "O que se di na ofi e nunca na videochamada: ___.", "O que se diz no escritório e nunca na videochamada: ___."],
+["El animal más peligroso al que Jorge ganaría a muerte: ___.", "O animal máis perigoso ao que Jorge gañaría nunha loita a morte: ___.", "O animal mais perigoso que o Jorge venceria numa luta de morte: ___."],
+["El piloto se ha desmayado. El equipo decide que aterrice ___.", "O piloto desmaiouse. O equipo decide que aterre ___.", "O piloto desmaiou. A equipa decide que quem aterra é ___."],
+["Para aterrizar el avión, lo primero que haría Diego es ___.", "Para aterrar o avión, o primeiro que faría Diego é ___.", "Para aterrar o avião, a primeira coisa que o Diego faria era ___."],
+["El debate de este jueves: ¿quién ganaría un combate a muerte contra ___?", "O debate deste xoves: quen gañaría un combate a morte contra ___?", "O debate desta quinta: quem ganharia uma luta de morte contra ___?"],
+["En el seguimiento: \"Ayer estuve con ___ y hoy sigo con ___.\"", "No seguimento: \"Onte estiven con ___ e hoxe sigo con ___.\"", "Na reunião de acompanhamento: \"Ontem estive com ___ e hoje continuo com ___.\""],
+["El cliente quiere IA para ___, pero no tiene ___.", "O cliente quere IA para ___, pero non ten ___.", "O cliente quer IA para ___, mas não tem ___."],
+["Riesgo: ___. Mitigación: ___.", "Risco: ___. Mitigación: ___.", "Risco: ___. Mitigação: ___."],
+["En un combate a muerte, ___ ganaría a ___.", "Nun combate a morte, ___ gañaríalle a ___.", "Numa luta de morte, ___ ganhava a ___."],
+["Lo vendimos como ___ y entregamos ___.", "Vendémolo como ___ e entregamos ___.", "Vendemos como ___ e entregámos ___."],
+["El cliente no quería ___, quería ___.", "O cliente non quería ___, quería ___.", "O cliente não queria ___, queria ___."],
+["___ + ___ = el nuevo producto estrella del equipo.", "___ + ___ = o novo produto estrela do equipo.", "___ + ___ = o novo produto estrela da equipa."]
+];
+const WHITE_T = [
+["Un muscle up delante del cliente.", "Un muscle up diante do cliente.", "Um muscle up à frente do cliente."],
+["Jorge contando lo del muscle up otra vez.", "Jorge contando o do muscle up outra vez.", "O Jorge a contar a história do muscle up outra vez."],
+["El himno del Oviedo a todo volumen.", "O himno do Oviedo a todo volume.", "O hino do Oviedo no volume máximo."],
+["24 años esperando volver a Primera.", "24 anos agardando volver a Primeira.", "24 anos à espera de voltar à Primeira."],
+["Sergio explicando que lo del Oviedo es un sentimiento.", "Sergio explicando que o do Oviedo é un sentimento.", "O Sergio a explicar que o Oviedo é um sentimento."],
+["Un chisme que no sale de aquí.", "Unha rexouba que non sae de aquí.", "Uma coscuvilhice que não sai daqui."],
+["Un concierto de Taylor Swift.", "Un concerto de Taylor Swift.", "Um concerto da Taylor Swift."],
+["María organizando a 16 adultos como si fuera un campamento.", "María organizando a 16 adultos coma se fose un campamento.", "A María a organizar 16 adultos como se fosse um campo de férias."],
+["Dos caballos y un kayak.", "Dous cabalos e un kaiak.", "Dois cavalos e um caiaque."],
+["Remontar el río en kayak para llegar a la reunión.", "Remontar o río en kaiak para chegar á reunión.", "Subir o rio de caiaque para chegar à reunião."],
+["Un caballo en la sala de reuniones.", "Un cabalo na sala de reunións.", "Um cavalo na sala de reuniões."],
+["Un ticket con 47 subtareas.", "Un ticket con 47 subtarefas.", "Um ticket com 47 subtarefas."],
+["Un ticket \"En curso\" desde 2023.", "Un ticket \"En curso\" dende 2023.", "Um ticket \"Em curso\" desde 2023."],
+["Mover todo a \"Hecho\" cinco minutos antes del seguimiento.", "Mover todo a \"Feito\" cinco minutos antes do seguimento.", "Mover tudo para \"Feito\" cinco minutos antes da reunião."],
+["\"¿Esto tiene ticket?\"", "\"Isto ten ticket?\"", "\"Isto tem ticket?\""],
+["El tablero de Jira de Vane.", "O taboleiro de Jira de Vane.", "O quadro de Jira da Vane."],
+["Lo que pesque Santi este finde.", "O que pesque Santi esta fin de semana.", "O que o Santi pescar este fim de semana."],
+["Un proyecto que Santi empezó y nunca acabó.", "Un proxecto que Santi comezou e nunca rematou.", "Um projeto que o Santi começou e nunca acabou."],
+["El pez enorme que pescó Santi (según Santi).", "O peixe enorme que pescou Santi (segundo Santi).", "O peixe enorme que o Santi pescou (segundo o Santi)."],
+["Echar la caña a ver si pica un cliente.", "Botar a cana a ver se pica un cliente.", "Lançar a cana a ver se morde algum cliente."],
+["Un cachopo casi entero.", "Un cachopo case enteiro.", "Um cachopo quase inteiro."],
+["Seguir motivado ata o final.", "Seguir motivado ata o final.", "Continuar motivado até ao fim."],
+["Marcos viendo cómo Santiago se acaba el cachopo.", "Marcos vendo como Santiago remata o cachopo.", "O Marcos a ver o Santiago acabar o cachopo."],
+["Un cachopo entero, sin ayuda.", "Un cachopo enteiro, sen axuda.", "Um cachopo inteiro, sem ajuda."],
+["Un bug legendario.", "Un bug lendario.", "Um bug lendário."],
+["Bautizar los bugs como Pokémon.", "Bautizar os bugs coma Pokémon.", "Batizar os bugs como Pokémon."],
+["Una carta Pokémon holográfica de primera edición.", "Unha carta Pokémon holográfica de primeira edición.", "Uma carta Pokémon holográfica de primeira edição."],
+["João llegando antes de haber salido.", "João chegando antes de saír.", "O João a chegar antes de ter saído."],
+["El coche de João en modo despegue.", "O coche de João en modo despegue.", "O carro do João em modo descolagem."],
+["\"Estou quase a chegar!\"", "\"Estou quase a chegar!\"", "\"Estou quase a chegar!\""],
+["Que Jose sabe cantar (según Ricardo).", "Que Jose sabe cantar (segundo Ricardo).", "Que o Jose sabe cantar (segundo o Ricardo)."],
+["Que Ricardo sabe cantar (según Jose).", "Que Ricardo sabe cantar (segundo Jose).", "Que o Ricardo sabe cantar (segundo o Jose)."],
+["Un dúo que nadie ha escuchado nunca.", "Un dúo que ninguén escoitou nunca.", "Um dueto que nunca ninguém ouviu."],
+["Podar un olivo en plena demo.", "Podar unha oliveira en plena demo.", "Podar uma oliveira em plena demo."],
+["Los pájaros de Brais.", "Os paxaros de Brais.", "Os pássaros do Brais."],
+["Recortar el alcance como quien poda un olivo.", "Recortar o alcance como quen poda unha oliveira.", "Cortar o âmbito como quem poda uma oliveira."],
+["CompetitivOps.", "CompetitivOps.", "CompetitivOps."],
+["Una palabra cualquiera acabada en Ops.", "Unha palabra calquera rematada en Ops.", "Uma palavra qualquer acabada em Ops."],
+["DiegOps.", "DiegOps.", "DiegOps."],
+["El meme del golpe de remo.", "O meme do golpe de remo.", "O meme do golpe de remo."],
+["El meme del golpe de remo en el canal del cliente.", "O meme do golpe de remo na canle do cliente.", "O meme do golpe de remo no canal do cliente."],
+["El visto bueno del head of software.", "O visto e prace do head of software.", "A luz verde do head of software."],
+["Un sarao montado por Jesús.", "Un sarao montado por Jesús.", "Uma festarola organizada pelo Jesús."],
+["María y Jesús picándose otra vez.", "María e Jesús picándose outra vez.", "A María e o Jesús a picarem-se outra vez."],
+["Jesús organizando la cena de Navidad en septiembre.", "Jesús organizando a cea de Nadal en setembro.", "O Jesús a organizar o jantar de Natal em setembro."],
+["Un CSS que solo funciona en el portátil de Jesús.", "Un CSS que só funciona no portátil de Jesús.", "Um CSS que só funciona no portátil do Jesús."],
+["La web del cliente vista desde un móvil.", "A web do cliente vista dende un móbil.", "O site do cliente visto num telemóvel."],
+["La VPN del cliente.", "A VPN do cliente.", "A VPN do cliente."],
+["Un Excel con macros de 2009.", "Un Excel con macros de 2009.", "Um Excel com macros de 2009."],
+["\"¿Esto no lo hace ChatGPT?\"", "\"Isto non o fai ChatGPT?\"", "\"Isto o ChatGPT não faz?\""],
+["Un PoC que lleva tres años en producción.", "Un PoC que leva tres anos en produción.", "Uma PoC que está há três anos em produção."],
+["El sistema legacy que nadie se atreve a tocar.", "O sistema legacy que ninguén se atreve a tocar.", "O sistema legacy em que ninguém se atreve a mexer."],
+["Datos en PDFs escaneados.", "Datos en PDF escaneados.", "Dados em PDFs digitalizados."],
+["El becario del cliente, que sabe más que todos.", "O bolseiro do cliente, que sabe máis ca todos.", "O estagiário do cliente, que sabe mais do que todos."],
+["\"Lo necesitamos para ayer.\"", "\"Necesitámolo para onte.\"", "\"Precisamos disto para ontem.\""],
+["Una demo que funcionó en el ensayo.", "Unha demo que funcionou no ensaio.", "Uma demo que funcionou no ensaio."],
+["El comercial.", "O comercial.", "O comercial."],
+["Un cambio de interlocutor a mitad de proyecto.", "Un cambio de interlocutor a metade de proxecto.", "Uma mudança de interlocutor a meio do projeto."],
+["Las horas que no se pueden facturar.", "As horas que non se poden facturar.", "As horas que não se podem faturar."],
+["Una factura a 120 días.", "Unha factura a 120 días.", "Uma fatura a 120 dias."],
+["Un dashboard que nadie va a abrir.", "Un dashboard que ninguén vai abrir.", "Um dashboard que ninguém vai abrir."],
+["\"On-premise, por seguridad.\"", "\"On-premise, por seguridade.\"", "\"On-premise, por segurança.\""],
+["Un servidor debajo de una mesa.", "Un servidor debaixo dunha mesa.", "Um servidor debaixo de uma secretária."],
+["El director general que vio un vídeo en LinkedIn.", "O director xeral que viu un vídeo en LinkedIn.", "O diretor-geral que viu um vídeo no LinkedIn."],
+["Un NDA de 40 páginas.", "Un NDA de 40 páxinas.", "Um NDA de 40 páginas."],
+["Firmar el contrato con el proyecto ya terminado.", "Asinar o contrato co proxecto xa rematado.", "Assinar o contrato com o projeto já acabado."],
+["El socio que nunca contesta los correos.", "O socio que nunca contesta os correos.", "O parceiro que nunca responde aos emails."],
+["\"Esto ya lo teníais hecho, ¿no?\"", "\"Isto xa o tiñades feito, non?\"", "\"Isto já estava feito, não?\""],
+["Una reunión con 14 personas del cliente y ninguna que decida.", "Unha reunión con 14 persoas do cliente e ningunha que decida.", "Uma reunião com 14 pessoas do cliente e nenhuma que decida."],
+["\"¿Hacemos una llamada rápida?\"", "\"Facemos unha chamada rápida?\"", "\"Fazemos uma chamada rápida?\""],
+["Un pliego de 200 páginas.", "Un prego de 200 páxinas.", "Um caderno de encargos de 200 páginas."],
+["Dos requisitos que se contradicen.", "Dous requisitos que se contradín.", "Dois requisitos que se contradizem."],
+["\"Ponedle IA.\"", "\"Poñédelle IA.\"", "\"Ponham-lhe IA.\""],
+["Una presentación de 87 diapositivas para dirección.", "Unha presentación de 87 diapositivas para a dirección.", "Uma apresentação de 87 diapositivos para a administração."],
+["Un cliente que dice \"OK\" a todo.", "Un cliente que di \"OK\" a todo.", "Um cliente que diz \"OK\" a tudo."],
+["Un usuario final que nadie ha visto nunca.", "Un usuario final que ninguén viu nunca.", "Um utilizador final que nunca ninguém viu."],
+["Una oferta cerrada a las 3 de la mañana.", "Unha oferta pechada ás 3 da mañá.", "Uma proposta fechada às 3 da manhã."],
+["Un acta de reunión que nadie escribió.", "Unha acta de reunión que ninguén escribiu.", "Uma ata de reunião que ninguém escreveu."],
+["informe_final_final_v7_ahora_si.docx", "informe_final_final_v7_agora_si.docx", "relatorio_final_final_v7_agora_sim.docx"],
+["\"Lo vemos en la próxima reunión.\"", "\"Vémolo na próxima reunión.\"", "\"Vemos isso na próxima reunião.\""],
+["Un cliente que todavía quiere blockchain.", "Un cliente que aínda quere blockchain.", "Um cliente que ainda quer blockchain."],
+["\"¿Podéis poner el logo más grande?\"", "\"Podedes poñer o logo máis grande?\"", "\"Podem pôr o logótipo maior?\""],
+["El contrato, pendiente de revisión por el departamento legal.", "O contrato, pendente de revisión polo departamento legal.", "O contrato, pendente de revisão pelo departamento jurídico."],
+["Un piloto que acabó siendo el producto.", "Un piloto que acabou sendo o produto.", "Um piloto que acabou por ser o produto."],
+["\"Es solo un cambio pequeñito.\"", "\"É só un cambio pequeniño.\"", "\"É só uma alteraçãozinha.\""],
+["Un YAML de 3.000 líneas.", "Un YAML de 3.000 liñas.", "Um YAML de 3000 linhas."],
+["Un git push --force en viernes.", "Un git push --force en venres.", "Um git push --force numa sexta-feira."],
+["Un pod en CrashLoopBackOff.", "Un pod en CrashLoopBackOff.", "Um pod em CrashLoopBackOff."],
+["Un conector que nadie sabe configurar.", "Un conector que ninguén sabe configurar.", "Um conector que ninguém sabe configurar."],
+["Las GPUs que nunca llegaron.", "As GPU que nunca chegaron.", "As GPUs que nunca chegaram."],
+["\"En mi máquina funciona.\"", "\"Na miña máquina funciona.\"", "\"Na minha máquina funciona.\""],
+["Un LLM alucinando con total seguridad.", "Un LLM alucinando con total seguridade.", "Um LLM a alucinar com toda a confiança."],
+["El RGPD.", "O RGPD.", "O RGPD."],
+["Kubernetes, porque sí.", "Kubernetes, porque si.", "Kubernetes, porque sim."],
+["Un pipeline de Kafka que nadie entiende.", "Un pipeline de Kafka que ninguén entende.", "Um pipeline de Kafka que ninguém percebe."],
+["Un 99% de precisión… en test.", "Un 99 % de precisión… en test.", "Uma precisão de 99%… em teste."],
+["Un agente de IA con acceso a producción.", "Un axente de IA con acceso a produción.", "Um agente de IA com acesso a produção."],
+["Un prompt de cuatro páginas.", "Un prompt de catro páxinas.", "Um prompt de quatro páginas."],
+["Entrenar con el conjunto de test.", "Adestrar co conxunto de test.", "Treinar com o conjunto de teste."],
+["Un CSV separado por comas, puntos y comas y tabuladores a la vez.", "Un CSV separado por comas, puntos e comas e tabuladores á vez.", "Um CSV separado por vírgulas, pontos e vírgulas e tabs ao mesmo tempo."],
+["Fechas en cinco formatos distintos.", "Datas en cinco formatos distintos.", "Datas em cinco formatos diferentes."],
+["Una columna llamada \"OTROS2\".", "Unha columna chamada \"OUTROS2\".", "Uma coluna chamada \"OUTROS2\"."],
+["Un modelo que solo funciona los martes.", "Un modelo que só funciona os martes.", "Um modelo que só funciona às terças."],
+["La factura de la nube a final de mes.", "A factura da nube a final de mes.", "A fatura da cloud no fim do mês."],
+["Un certificado SSL caducado.", "Un certificado SSL caducado.", "Um certificado SSL expirado."],
+["Un rm -rf con demasiada confianza.", "Un rm -rf con demasiada confianza.", "Um rm -rf com demasiada confiança."],
+["40 GB de logs.", "40 GB de logs.", "40 GB de logs."],
+["La documentación (inexistente).", "A documentación (inexistente).", "A documentação (inexistente)."],
+["Un Dockerfile heredado.", "Un Dockerfile herdado.", "Um Dockerfile herdado."],
+["Un microservicio por persona.", "Un microservizo por persoa.", "Um microsserviço por pessoa."],
+["Un espacio de datos sin datos.", "Un espazo de datos sen datos.", "Um espaço de dados sem dados."],
+["Una política de uso que prohíbe usar los datos.", "Unha política de uso que prohibe usar os datos.", "Uma política de utilização que proíbe usar os dados."],
+["Desplegar en producción a las 17:59 de un viernes.", "Despregar en produción ás 17:59 dun venres.", "Fazer deploy em produção às 17:59 de uma sexta."],
+["Un modelo en producción servido desde un notebook.", "Un modelo en produción servido dende un notebook.", "Um modelo em produção servido a partir de um notebook."],
+["Un chatbot que le ha prometido un descuento al cliente.", "Un chatbot que lle prometeu un desconto ao cliente.", "Um chatbot que prometeu um desconto ao cliente."],
+["Reentrenar el modelo \"un momento\".", "Readestrar o modelo \"un momento\".", "Voltar a treinar o modelo \"num instante\"."],
+["Agentes que monitorizan a los agentes que monitorizan agentes.", "Axentes que monitorizan os axentes que monitorizan axentes.", "Agentes que monitorizam os agentes que monitorizam agentes."],
+["Un dato personal donde no debía estar.", "Un dato persoal onde non debía estar.", "Um dado pessoal onde não devia estar."],
+["Una contraseña subida al repositorio.", "Un contrasinal subido ao repositorio.", "Uma password no repositório."],
+["El jueves de oficina.", "O xoves de oficina.", "A quinta-feira de escritório."],
+["Ir a la ofi un lunes sin avisar.", "Ir á ofi un luns sen avisar.", "Ir ao escritório numa segunda sem avisar."],
+["Buscar sitio libre en la ofi un jueves.", "Buscar sitio libre na ofi un xoves.", "Procurar lugar livre no escritório numa quinta."],
+["El café de la ofi.", "O café da ofi.", "O café do escritório."],
+["La lluvia de Vigo.", "A chuvia de Vigo.", "A chuva de Vigo."],
+["La hora de menos de Portugal.", "A hora de menos de Portugal.", "A hora a menos de Portugal."],
+["Portuñol en el seguimiento con el cliente.", "Portuñol no seguimento co cliente.", "Portunhol na reunião com o cliente."],
+["Un pastel de nata en mitad de la reunión.", "Un pastel de nata no medio da reunión.", "Um pastel de nata a meio da reunião."],
+["El coworking de Portugal.", "O coworking de Portugal.", "O coworking em Portugal."],
+["Una videollamada España-Portugal con cuatro segundos de retraso.", "Unha videochamada España-Portugal con catro segundos de atraso.", "Uma videochamada Espanha-Portugal com quatro segundos de atraso."],
+["\"¿Me oís? ¿Se me oye?\"", "\"Oídesme? Escóitaseme?\"", "\"Estão a ouvir-me? Ouve-se?\""],
+["\"Estás silenciado.\"", "\"Estás silenciado.\"", "\"Estás em silêncio.\""],
+["Una reunión que podía haber sido un email.", "Unha reunión que podía ser un correo.", "Uma reunião que podia ter sido um email."],
+["Una reunión presencial en la que todos siguen en videollamada.", "Unha reunión presencial na que todos seguen en videochamada.", "Uma reunião presencial em que estão todos na videochamada."],
+["Compartir la pantalla equivocada.", "Compartir a pantalla equivocada.", "Partilhar o ecrã errado."],
+["Un fondo difuminado que no difumina nada.", "Un fondo difuminado que non difumina nada.", "Um fundo desfocado que não desfoca nada."],
+["La lavadora centrifugando durante la demo.", "A lavadora centrifugando durante a demo.", "A máquina de lavar a centrifugar durante a demo."],
+["Pijama de cintura para abajo.", "Pixama da cintura para abaixo.", "Pijama da cintura para baixo."],
+["La cámara apagada \"porque va mal la conexión\".", "A cámara apagada \"porque vai mal a conexión\".", "A câmara desligada \"porque a ligação está má\"."],
+["Un gato paseando por el teclado en plena demo.", "Un gato paseando polo teclado en plena demo.", "Um gato a passear pelo teclado em plena demo."],
+["Un ganso con mala leche.", "Un ganso con mala leite.", "Um ganso com mau feitio."],
+["Una gaviota de Vigo con una empanada en el pico.", "Unha gaivota de Vigo cunha empanada no peteiro.", "Uma gaivota de Vigo com uma empanada no bico."],
+["Un pato del tamaño de un caballo.", "Un pato do tamaño dun cabalo.", "Um pato do tamanho de um cavalo."],
+["Cien caballos del tamaño de un pato.", "Cen cabalos do tamaño dun pato.", "Cem cavalos do tamanho de um pato."],
+["Un canguro que ha ido al gimnasio.", "Un canguro que foi ao ximnasio.", "Um canguru que vai ao ginásio."],
+["Un chimpancé enfadado.", "Un chimpancé anoxado.", "Um chimpanzé chateado."],
+["Una avispa asiática.", "Unha vespa velutina.", "Uma vespa asiática."],
+["Un jabalí del monte gallego.", "Un xabaril do monte galego.", "Um javali do monte galego."],
+["Los pájaros de Brais, todos a la vez.", "Os paxaros de Brais, todos á vez.", "Os pássaros do Brais, todos ao mesmo tempo."],
+["Los caballos de Alex en estampida.", "Os cabalos de Alex en estampida.", "Os cavalos de Alex em debandada."],
+["Un animal que claramente te ganaría.", "Un animal que claramente che gañaría.", "Um animal que claramente te venceria."],
+["Aterrizar un avión sin ayuda.", "Aterrar un avión sen axuda.", "Aterrar um avião sem ajuda."],
+["Un tutorial de YouTube a velocidad x2.", "Un titorial de YouTube a velocidade x2.", "Um tutorial do YouTube em velocidade x2."],
+["Un LLM a los mandos.", "Un LLM aos mandos.", "Um LLM aos comandos."],
+["Un ticket en Jira titulado \"Aterrizar avión\".", "Un ticket en Jira titulado \"Aterrar avión\".", "Um ticket no Jira chamado \"Aterrar avião\"."],
+["Muchísima confianza y cero experiencia.", "Moitísima confianza e cero experiencia.", "Imensa confiança e zero experiência."],
+["Haber jugado mucho al simulador de vuelo.", "Ter xogado moito ao simulador de voo.", "Ter jogado muito ao simulador de voo."],
+["\"Lo miro después de la reunión.\"", "\"Mírolo despois da reunión.\"", "\"Vejo isso depois da reunião.\""],
+["\"Eso está en el backlog.\"", "\"Iso está no backlog.\"", "\"Isso está no backlog.\""],
+["\"Es un tema de permisos.\"", "\"É un tema de permisos.\"", "\"É uma questão de permissões.\""],
+["\"Te lo paso por el chat.\"", "\"Pásocho polo chat.\"", "\"Mando-te pelo chat.\""],
+["\"¿Lo vemos el jueves en la ofi?\"", "\"Vémolo o xoves na ofi?\"", "\"Vemos isso na quinta no escritório?\""],
+["\"Esto lo cerramos en cinco minutos.\"", "\"Isto pechámolo en cinco minutos.\"", "\"Isto fecha-se em cinco minutos.\""],
+["\"Yo no he tocado nada.\"", "\"Eu non toquei nada.\"", "\"Eu não mexi em nada.\""],
+["\"Ayer funcionaba.\"", "\"Onte funcionaba.\"", "\"Ontem funcionava.\""]
+];
+
+/* ---------- Textos de la interfaz: [español, galego, português] ---------- */
+const LANGS = ["es", "gl", "pt"];
+const LANG_NAMES = { es: "Español", gl: "Galego", pt: "Português" };
+let LANG = "es";
+const li = () => Math.max(0, LANGS.indexOf(LANG));
+const TX = {
+  brand: ["Cartas contra el Cliente", "Cartas contra o Cliente", "Cartas contra o Cliente"],
+  wordmark: ["Cartas <em>contra el</em> Cliente.", "Cartas <em>contra o</em> Cliente.", "Cartas <em>contra o</em> Cliente."],
+  edition: ["Edición equipo", "Edición equipo", "Edição equipa"],
+  lead: ["El juego de cartas del equipo. En cada ronda alguien hace de cliente y el resto le vende la mejor respuesta.", "O xogo de cartas do equipo. En cada rolda alguén fai de cliente e o resto véndelle a mellor resposta.", "O jogo de cartas da equipa. Em cada ronda alguém faz de cliente e os outros vendem-lhe a melhor resposta."],
+  leadHint: ["Hasta 20 personas en la misma sala, cada una desde su móvil o su portátil.", "Ata 20 persoas na mesma sala, cada unha dende o seu móbil ou o seu portátil.", "Até 20 pessoas na mesma sala, cada uma no seu telemóvel ou portátil."],
+  demoBtn: ["Ver una partida de ejemplo", "Ver unha partida de exemplo", "Ver um jogo de exemplo"],
+  noRoom: ["Para jugar, abre esta página dentro de Claude con tu cuenta iniciada. La sala conecta a las personas que tienen acceso a esta página; si te han pasado el enlace, pide que te inviten por correo.", "Para xogar, abre esta páxina dentro de Claude coa túa conta iniciada. A sala conecta as persoas que teñen acceso a esta páxina; se che pasaron a ligazón, pide que te conviden por correo.", "Para jogar, abre esta página no Claude com a tua conta iniciada. A sala liga as pessoas que têm acesso a esta página; se te passaram o link, pede que te convidem por email."],
+  noServer: ["No se puede conectar con el servidor del juego. Abre la página desde la dirección donde está desplegado el servidor.", "Non se pode conectar co servidor do xogo. Abre a páxina dende o enderezo onde está despregado o servidor.", "Não é possível ligar ao servidor do jogo. Abre a página a partir do endereço onde o servidor está instalado."],
+  nameLabel: ["Tu nombre en la partida", "O teu nome na partida", "O teu nome no jogo"],
+  namePh: ["Por ejemplo, Vane", "Por exemplo, Vane", "Por exemplo, Vane"],
+  teamNames: ["Nombres del equipo", "Nomes do equipo", "Nomes da equipa"],
+  avLabel: ["Tu avatar", "O teu avatar", "O teu avatar"],
+  avPh: ["Escribe un emoji o tus iniciales", "Escribe un emoji ou as túas iniciais", "Escreve um emoji ou as tuas iniciais"],
+  avClear: ["Iniciales", "Iniciais", "Iniciais"],
+  avSuggest: ["Avatares sugeridos", "Avatares suxeridos", "Avatares sugeridos"],
+  createTitle: ["Crear una sala", "Crear unha sala", "Criar uma sala"],
+  createHint: ["Te da un código de cuatro letras para compartir con el resto.", "Dáche un código de catro letras para compartir co resto.", "Dá-te um código de quatro letras para partilhares com os outros."],
+  createBtn: ["Crear sala", "Crear sala", "Criar sala"],
+  joinTitle: ["Entrar con código", "Entrar con código", "Entrar com código"],
+  codeLabel: ["Código de sala", "Código da sala", "Código da sala"],
+  joinBtn: ["Entrar", "Entrar", "Entrar"],
+  openTitle: ["Salas abiertas ahora", "Salas abertas agora", "Salas abertas agora"],
+  rulesTitle: ["Cómo se juega", "Como se xoga", "Como se joga"],
+  rule1: ["En cada ronda, una persona hace de <b>cliente</b> y sale una carta negra.", "En cada rolda, unha persoa fai de <b>cliente</b> e sae unha carta negra.", "Em cada ronda, uma pessoa faz de <b>cliente</b> e sai uma carta preta."],
+  rule2: ["El resto elige en su mano la carta blanca que mejor la completa (o dos, si la carta lo pide) y la envía.", "O resto escolle na súa man a carta branca que mellor a completa (ou dúas, se a carta o pide) e envíaa.", "Os outros escolhem na sua mão a carta branca que melhor a completa (ou duas, se a carta o pedir) e enviam-na."],
+  rule3: ["El cliente lee las propuestas sin saber de quién son y firma la que más le guste. Esa persona gana un punto.", "O cliente le as propostas sen saber de quen son e asina a que máis lle guste. Esa persoa gaña un punto.", "O cliente lê as propostas sem saber de quem são e assina a de que mais gostar. Essa pessoa ganha um ponto."],
+  rule4: ["Todo el mundo roba hasta completar la mano y el papel de cliente pasa a la siguiente persona.", "Todo o mundo colle cartas ata completar a man e o papel de cliente pasa á seguinte persoa.", "Todos tiram cartas até completar a mão e o papel de cliente passa para a pessoa seguinte."],
+  rule5: ["Gana quien llegue primero a los puntos acordados en la sala de espera.", "Gaña quen chegue antes aos puntos acordados na sala de espera.", "Ganha quem chegar primeiro aos pontos combinados na sala de espera."],
+  ruleBlank: ["<b>Carta en blanco:</b> escribe tu propia respuesta. Cada persona tiene las que se acuerden al crear la partida.", "<b>Carta en branco:</b> escribe a túa propia resposta. Cada persoa ten as que se acorden ao crear a partida.", "<b>Carta em branco:</b> escreves a tua própria resposta. Cada pessoa tem as que se combinarem ao criar o jogo."],
+  ruleRemo: ["<b>¡Golpe de remo!:</b> una vez por partida puedes tirar tu mano entera y robar una nueva.", "<b>Golpe de remo!:</b> unha vez por partida podes tirar a túa man enteira e coller unha nova.", "<b>Golpe de remo!:</b> uma vez por jogo podes deitar fora a mão inteira e tirar uma nova."],
+  leave: ["Salir", "Saír", "Sair"],
+  copyAria: ["Copiar código de sala", "Copiar código da sala", "Copiar código da sala"],
+  blankLabel: ["Tu respuesta en la carta en blanco", "A túa resposta na carta en branco", "A tua resposta na carta em branco"],
+  blankPh: ["Escribe algo que el cliente no pueda rechazar", "Escribe algo que o cliente non poida rexeitar", "Escreve algo que o cliente não possa recusar"],
+  sendBtn: ["Enviar al cliente", "Enviar ao cliente", "Enviar ao cliente"],
+  board: ["Marcador", "Marcador", "Marcador"],
+  demoTitle: ["Partida de ejemplo", "Partida de exemplo", "Jogo de exemplo"],
+  close: ["Cerrar", "Pechar", "Fechar"],
+  again: ["Ver otra vez", "Ver outra vez", "Ver outra vez"],
+  goPlay: ["Ir a jugar", "Ir xogar", "Ir jogar"],
+  prev: ["Anterior", "Anterior", "Anterior"],
+  next: ["Siguiente", "Seguinte", "Seguinte"],
+  pause: ["Pausa", "Pausa", "Pausa"],
+  cont: ["Seguir", "Seguir", "Continuar"],
+  replay: ["Repetir", "Repetir", "Repetir"],
+  langLabel: ["Idioma", "Idioma", "Idioma"],
+  copied: ["Código {c} copiado", "Código {c} copiado", "Código {c} copiado"],
+  codeIs: ["Código de sala: {c}", "Código da sala: {c}", "Código da sala: {c}"],
+  pickLimit: ["Ya tienes {n} cartas elegidas. Quita una para cambiarla.", "Xa tes {n} cartas escollidas. Quita unha para cambiala.", "Já tens {n} cartas escolhidas. Tira uma para a trocar."],
+  needBlank: ["Escribe tu respuesta en la carta en blanco.", "Escribe a túa resposta na carta en branco.", "Escreve a tua resposta na carta em branco."],
+  remoToast: ["¡Golpe de remo! Mano nueva en camino.", "Golpe de remo! Man nova en camiño.", "Golpe de remo! Mão nova a caminho."],
+  errCode: ["El código tiene cuatro letras.", "O código ten catro letras.", "O código tem quatro letras."],
+  errName: ["Escribe tu nombre antes de entrar.", "Escribe o teu nome antes de entrar.", "Escreve o teu nome antes de entrar."],
+  errNotPermitted: ["Tu cuenta no puede entrar en salas de esta página. Pide a quien la comparte que te invite.", "A túa conta non pode entrar en salas desta páxina. Pídelle a quen a comparte que te convide.", "A tua conta não pode entrar em salas desta página. Pede a quem a partilha que te convide."],
+  errLimit: ["Hay demasiadas salas abiertas en esta pestaña. Recarga la página e inténtalo otra vez.", "Hai demasiadas salas abertas nesta lapela. Recarga a páxina e téntao outra vez.", "Há demasiadas salas abertas neste separador. Recarrega a página e tenta outra vez."],
+  errJoin: ["No se ha podido conectar con la sala. Inténtalo de nuevo en unos segundos.", "Non se puido conectar coa sala. Téntao de novo nuns segundos.", "Não foi possível ligar à sala. Tenta outra vez daqui a uns segundos."],
+  resumeRoom: ["Volver a la sala {c} como {n}", "Volver á sala {c} como {n}", "Voltar à sala {c} como {n}"],
+  roomRow1: ["Sala de {h} · 1 persona", "Sala de {h} · 1 persoa", "Sala de {h} · 1 pessoa"],
+  roomRowN: ["Sala de {h} · {n} personas", "Sala de {h} · {n} persoas", "Sala de {h} · {n} pessoas"],
+  playing: [" · jugando", " · xogando", " · a jogar"],
+  phLobby: ["Sala de espera", "Sala de espera", "Sala de espera"],
+  phPlay: ["Ronda {r} · propuestas", "Rolda {r} · propostas", "Ronda {r} · propostas"],
+  phJudge: ["Ronda {r} · decide el cliente", "Rolda {r} · decide o cliente", "Ronda {r} · o cliente decide"],
+  phRes: ["Ronda {r} · firmado", "Rolda {r} · asinado", "Ronda {r} · assinado"],
+  phEnd: ["Fin de la partida", "Fin da partida", "Fim do jogo"],
+  connecting: ["Conectando…", "Conectando…", "A ligar…"],
+  notFound: ["No hay ninguna partida abierta con el código {c}. Revisa el código o sal y crea una sala nueva.", "Non hai ningunha partida aberta co código {c}. Revisa o código ou sae e crea unha sala nova.", "Não há nenhum jogo aberto com o código {c}. Confirma o código ou sai e cria uma sala nova."],
+  connectingRoom: ["Conectando con la sala…", "Conectando coa sala…", "A ligar à sala…"],
+  stale: ["Buscando a quien lleva la partida…", "Buscando a quen leva a partida…", "À procura de quem gere o jogo…"],
+  full: ["La sala está llena (20 personas). Puedes mirar la partida.", "A sala está chea (20 persoas). Podes mirar a partida.", "A sala está cheia (20 pessoas). Podes ver o jogo."],
+  entering: ["Entrando en la partida…", "Entrando na partida…", "A entrar no jogo…"],
+  lost: ["Se ha perdido la conexión con la sala. Sal y vuelve a entrar con el mismo código.", "Perdeuse a conexión coa sala. Sae e volve entrar co mesmo código.", "Perdeu-se a ligação à sala. Sai e volta a entrar com o mesmo código."],
+  copyCode: ["Copiar código", "Copiar código", "Copiar código"],
+  lobbyHint: ["Cada persona abre esta misma página, escribe su nombre y entra con el código.", "Cada persoa abre esta mesma páxina, escribe o seu nome e entra co código.", "Cada pessoa abre esta mesma página, escreve o seu nome e entra com o código."],
+  inRoom: ["En la sala", "Na sala", "Na sala"],
+  host: ["anfitrión", "anfitrión", "anfitrião"],
+  you: ["tú", "ti", "tu"],
+  settings: ["Ajustes", "Axustes", "Definições"],
+  ptsToWin: ["Puntos para ganar", "Puntos para gañar", "Pontos para ganhar"],
+  blanksPer: ["Cartas en blanco por persona", "Cartas en branco por persoa", "Cartas em branco por pessoa"],
+  cfgRO1: ["Se gana con <b>{t} puntos</b>. Cada persona tiene <b>1 carta en blanco</b>.", "Gáñase con <b>{t} puntos</b>. Cada persoa ten <b>1 carta en branco</b>.", "Ganha-se com <b>{t} pontos</b>. Cada pessoa tem <b>1 carta em branco</b>."],
+  cfgRON: ["Se gana con <b>{t} puntos</b>. Cada persona tiene <b>{n} cartas en blanco</b>.", "Gáñase con <b>{t} puntos</b>. Cada persoa ten <b>{n} cartas en branco</b>.", "Ganha-se com <b>{t} pontos</b>. Cada pessoa tem <b>{n} cartas em branco</b>."],
+  handHint: ["Con {p} personas, cada una tendrá {h} cartas en la mano.", "Con {p} persoas, cada unha terá {h} cartas na man.", "Com {p} pessoas, cada uma terá {h} cartas na mão."],
+  startWith: ["Empezar partida con {n} personas", "Comezar partida con {n} persoas", "Começar o jogo com {n} pessoas"],
+  need1: ["Hace falta 1 persona más para empezar", "Fai falta 1 persoa máis para comezar", "Falta 1 pessoa para começar"],
+  needN: ["Hacen falta {n} personas más para empezar", "Fan falta {n} persoas máis para comezar", "Faltam {n} pessoas para começar"],
+  waitHost: ["Esperando a que {h} empiece la partida.", "Esperando a que {h} comece a partida.", "À espera que {h} comece o jogo."],
+  theHost: ["el anfitrión", "o anfitrión", "o anfitrião"],
+  round: ["Ronda {r}", "Rolda {r}", "Ronda {r}"],
+  client: ["Cliente:", "Cliente:", "Cliente:"],
+  youParen: [" (tú)", " (ti)", " (tu)"],
+  watching: ["Mirando la ronda {r}.", "Mirando a rolda {r}.", "A ver a ronda {r}."],
+  sentCount: ["{s} de {n} propuestas enviadas.", "{s} de {n} propostas enviadas.", "{s} de {n} propostas enviadas."],
+  czarYou: ["Eres el cliente de esta ronda.", "Es o cliente desta rolda.", "És o cliente desta ronda."],
+  czarInfo: ["Cuando lleguen las propuestas, eliges la ganadora. Llevan {s} de {n}.", "Cando cheguen as propostas, escolles a gañadora. Levan {s} de {n}.", "Quando chegarem as propostas, escolhes a vencedora. Já vão {s} de {n}."],
+  missing: ["Faltan: {l}", "Faltan: {l}", "Faltam: {l}"],
+  sentOk: ["Propuesta enviada.", "Proposta enviada.", "Proposta enviada."],
+  sending: ["Enviando tu propuesta…", "Enviando a túa proposta…", "A enviar a tua proposta…"],
+  rechoose: ["Volver a elegir", "Volver escoller", "Voltar a escolher"],
+  pick1: ["Elige la carta que mejor completa la frase.", "Escolle a carta que mellor completa a frase.", "Escolhe a carta que melhor completa a frase."],
+  pick2: ["Elige 2 cartas, en el orden en que se leen.", "Escolle 2 cartas, na orde en que se len.", "Escolhe 2 cartas, pela ordem em que se leem."],
+  pick2Pill: ["Elige 2", "Escolle 2", "Escolhe 2"],
+  blankCard: ["Carta en blanco", "Carta en branco", "Carta em branco"],
+  blankLeft1: ["Escribe tu propia respuesta. Te queda 1.", "Escribe a túa propia resposta. Quédache 1.", "Escreve a tua própria resposta. Resta-te 1."],
+  blankLeftN: ["Escribe tu propia respuesta. Te quedan {n}.", "Escribe a túa propia resposta. Quédanche {n}.", "Escreve a tua própria resposta. Restam-te {n}."],
+  blankOwn: ["Escribe tu propia respuesta.", "Escribe a túa propia resposta.", "Escreve a tua própria resposta."],
+  remo: ["¡Golpe de remo! Cambiar mi mano", "Golpe de remo! Cambiar a miña man", "Golpe de remo! Trocar a minha mão"],
+  remoArm: ["Toca otra vez para cambiar la mano", "Toca outra vez para cambiar a man", "Toca outra vez para trocar a mão"],
+  readAs: ["Así lo leerá el cliente", "Así o lerá o cliente", "É assim que o cliente o vai ler"],
+  readAsF: ["Así lo leerá la clienta", "Así o lerá a clienta", "É assim que a cliente o vai ler"],
+  judgeCz: ["Elige la propuesta que más te convenza.", "Escolle a proposta que máis te convenza.", "Escolhe a proposta que mais te convence."],
+  signing: ["Firmando…", "Asinando…", "A assinar…"],
+  judgeOther: ["{c} está leyendo las propuestas.", "{c} está lendo as propostas.", "{c} está a ler as propostas."],
+  theClient: ["El cliente", "O cliente", "O cliente"],
+  signBtn: ["Firmar esta propuesta", "Asinar esta proposta", "Assinar esta proposta"],
+  stamp: ["Aprobado", "Aprobado", "Aprovado"],
+  wins: ["{n} se lleva el punto", "{n} lévase o punto", "{n} ganha o ponto"],
+  youWin: [" (¡tú!)", " (ti!)", " (tu!)"],
+  randomPick: ["El cliente no estaba, así que se ha elegido al azar.", "O cliente non estaba, así que se escolleu ao chou.", "O cliente não estava, por isso escolheu-se ao acaso."],
+  nextSoon: ["La siguiente ronda empieza en unos segundos.", "A seguinte rolda comeza nuns segundos.", "A próxima ronda começa daqui a uns segundos."],
+  others: ["Las otras propuestas", "As outras propostas", "As outras propostas"],
+  someone: ["Alguien", "Alguén", "Alguém"],
+  contractClosed: ["Contrato cerrado", "Contrato pechado", "Contrato fechado"],
+  gameWon: ["{n} gana la partida", "{n} gaña a partida", "{n} ganha o jogo"],
+  tie: ["Empate entre {l}", "Empate entre {l}", "Empate entre {l}"],
+  and: [" y ", " e ", " e "],
+  withPts1: ["con 1 punto.", "con 1 punto.", "com 1 ponto."],
+  withPtsN: ["con {n} puntos.", "con {n} puntos.", "com {n} pontos."],
+  rounds1: ["1 ronda", "1 rolda", "1 ronda"],
+  roundsN: ["{n} rondas", "{n} roldas", "{n} rondas"],
+  ranking: ["Clasificación", "Clasificación", "Classificação"],
+  waitAgain: ["Esperando a que el anfitrión abra otra partida.", "Esperando a que o anfitrión abra outra partida.", "À espera que o anfitrião abra outro jogo."],
+  hostCtl: ["Controles de anfitrión", "Controis de anfitrión", "Controlos do anfitrião"],
+  toJudge: ["Pasar a votación ({n})", "Pasar á votación ({n})", "Passar à votação ({n})"],
+  skip: ["Saltar ronda", "Saltar rolda", "Saltar ronda"],
+  randomBtn: ["El cliente no está: elegir al azar", "O cliente non está: escoller ao chou", "O cliente não está: escolher ao acaso"],
+  nextNow: ["Siguiente ronda ya", "Seguinte rolda xa", "Próxima ronda já"],
+  newGame: ["Nueva partida con la misma sala", "Nova partida coa mesma sala", "Novo jogo com a mesma sala"],
+  disconnected: ["desconectado", "desconectado", "desligado"],
+  propSent: ["propuesta enviada", "proposta enviada", "proposta enviada"],
+  thinking: ["pensando…", "pensando…", "a pensar…"],
+  remove: ["Quitar", "Quitar", "Remover"],
+  clientTag: ["cliente", "cliente", "cliente"],
+  stepOf: ["Paso {i} de {n}", "Paso {i} de {n}", "Passo {i} de {n}"],
+  demoScreen: ["Pantalla de {n}", "Pantalla de {n}", "Ecrã de {n}"],
+  demoScreenClientF: ["Pantalla de {n}, la clienta", "Pantalla de {n}, a clienta", "Ecrã de {n}, a cliente"],
+  sendToClientF: ["Enviar a la clienta", "Enviar á clienta", "Enviar à cliente"],
+  hostF: ["anfitriona", "anfitrioa", "anfitriã"],
+  demoPlays3: ["Se juega a 3 puntos.", "Xógase a 3 puntos.", "Joga-se a 3 pontos."],
+  demoTo3: ["A 3 puntos", "A 3 puntos", "A 3 pontos"],
+  demoSkip: ["Rondas 4, 5 y 6", "Roldas 4, 5 e 6", "Rondas 4, 5 e 6"],
+  demoV3: ["Estoy en el kayak con Alex, no se ve nada", "Estou no kaiak con Alex, non se ve nada", "Estou no caiaque com o Alex, não se vê nada"],
+  d1: ["Una partida de ejemplo con cuatro personas, de principio a fin. Dura un minuto.", "Unha partida de exemplo con catro persoas, de principio a fin. Dura un minuto.", "Um jogo de exemplo com quatro pessoas, do princípio ao fim. Dura um minuto."],
+  d2: ["Alguien crea la sala y comparte el código. Cada persona entra desde su móvil con su nombre y su avatar.", "Alguén crea a sala e comparte o código. Cada persoa entra dende o seu móbil co seu nome e o seu avatar.", "Alguém cria a sala e partilha o código. Cada pessoa entra no seu telemóvel com o seu nome e o seu avatar."],
+  d3: ["Empieza la ronda 1. Vane hace de clienta y sale una carta negra.", "Comeza a rolda 1. Vane fai de clienta e sae unha carta negra.", "Começa a ronda 1. A Vane faz de cliente e sai uma carta preta."],
+  d4: ["El resto mira su mano y busca la carta que mejor completa la frase.", "O resto mira a súa man e busca a carta que mellor completa a frase.", "Os outros olham para a sua mão e procuram a carta que melhor completa a frase."],
+  d5: ["María elige la suya y ve cómo queda la frase antes de enviarla.", "María escolle a súa e ve como queda a frase antes de enviala.", "A María escolhe a sua e vê como fica a frase antes de a enviar."],
+  d6: ["Las propuestas llegan sin nombre. Cuando han enviado todos, pasan a la clienta.", "As propostas chegan sen nome. Cando enviaron todos, pasan á clienta.", "As propostas chegam sem nome. Quando todos enviaram, passam para a cliente."],
+  d7: ["Vane lee las propuestas en voz alta…", "Vane le as propostas en voz alta…", "A Vane lê as propostas em voz alta…"],
+  d8: ["…y firma la que más le convence.", "…e asina a que máis a convence.", "…e assina a que mais a convence."],
+  d9: ["Se descubre de quién era cada carta. María gana el punto y el papel de cliente pasa a Jorge.", "Descóbrese de quen era cada carta. María gaña o punto e o papel de cliente pasa a Jorge.", "Descobre-se de quem era cada carta. A María ganha o ponto e o papel de cliente passa para o Jorge."],
+  d10: ["Ronda 2. Algunas cartas piden dos respuestas: se eligen en el orden en que se leen.", "Rolda 2. Algunhas cartas piden dúas respostas: escóllense na orde en que se len.", "Ronda 2. Algumas cartas pedem duas respostas: escolhem-se pela ordem em que se leem."],
+  d11: ["Jorge firma la de Jesús. Ya van empatados.", "Jorge asina a de Jesús. Xa van empatados.", "O Jorge assina a do Jesús. Já estão empatados."],
+  d12: ["Ronda 3. Con una carta en blanco escribes tu propia respuesta.", "Rolda 3. Cunha carta en branco escribes a túa propia resposta.", "Ronda 3. Com uma carta em branco escreves a tua própria resposta."],
+  d13: ["María firma la de Vane: una respuesta escrita a mano también puede ganar.", "María asina a de Vane: unha resposta escrita a man tamén pode gañar.", "A María assina a da Vane: uma resposta escrita à mão também pode ganhar."],
+  d14: ["El papel de cliente sigue rotando ronda a ronda. Unas cuantas risas después…", "O papel de cliente segue rotando rolda a rolda. Unhas cantas risas despois…", "O papel de cliente vai rodando ronda a ronda. Umas quantas gargalhadas depois…"],
+  d15: ["María llega a 3 puntos y gana la partida. Ahora os toca a vosotros.", "María chega a 3 puntos e gaña a partida. Agora tócavos a vós.", "A María chega aos 3 pontos e ganha o jogo. Agora é a vossa vez."],
+};
+function t(k, p){ const row = TX[k]; let s = row ? (row[li()] || row[0]) : k; if (p) s = s.replace(/\{(\w+)\}/g, (m, x) => (p[x] != null ? String(p[x]) : m)); return s; }
+const tn = (k, n, p) => t(k + (n === 1 ? "1" : "N"), Object.assign({ n }, p || {}));
+
+/* ---------- Mazo derivado ---------- */
+const NW = NAMES.length * 2;            // los nombres van dos veces para que salgan a menudo
+const WCOUNT = NW + WHITE_T.length;
+function W(id){ if (id < NW) return NAMES[id % NAMES.length] + "."; const r = WHITE_T[id - NW]; return r ? (r[li()] || r[0]) : ""; }
+const BLACK = BLACK_T.map(r => ({ r, p: Math.max(1, (r[0].match(/___/g) || []).length), get t(){ return r[li()] || r[0]; } }));
+const BLANK = 1295;            // "zz": carta en blanco
+const MAX_PLAYERS = 20;
+const RES_MS = 9000;           // tiempo mostrando el ganador
+const TAKEOVER_MS = 8000;      // sin anfitrión durante este tiempo -> otro toma el relevo
+const KEEP = new Set(NAMES.flatMap(n => n.split(" ")).concat(["Kubernetes", "Jira", "Vigo", "Portugal", "Pokémon", "Taylor", "ChatGPT", "LinkedIn", "YouTube", "Excel", "Kafka", "Oviedo", "España", "Espanha", "Dockerfile"]));
+
+/* ---------- Utilidades ---------- */
+const $ = s => document.querySelector(s);
+const enc = n => n.toString(36).padStart(2, "0");
+const encList = a => a.map(enc).join("");
+function decList(s){ const out = []; s = typeof s === "string" ? s : ""; for (let i = 0; i + 1 < s.length; i += 2) { const n = parseInt(s.slice(i, i + 2), 36); if (Number.isFinite(n)) out.push(n); } return out; }
+function hash(str){ let h1 = 0xdeadbeef, h2 = 0x41c6ce57; for (let i = 0; i < str.length; i++) { const ch = str.charCodeAt(i); h1 = Math.imul(h1 ^ ch, 2654435761); h2 = Math.imul(h2 ^ ch, 1597334677); } h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909); h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909); return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36); }
+const keyOf = p => p.by ? "u" + hash(String(p.by)).slice(0, 10) : "p" + String(p.peer).slice(0, 20);
+function shuffle(a){ for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const charClass = ranges => "[" + ranges.map(([a, b]) => String.fromCharCode(a) + (b > a ? "-" + String.fromCharCode(b) : "")).join("") + "]";
+const INVIS = new RegExp(charClass([[0, 31], [127, 159], [173, 173], [8203, 8207], [8232, 8238], [8288, 8303], [65279, 65279]]), "g");
+const AV_STRIP = new RegExp(charClass([[0, 31], [127, 159], [173, 173], [8203, 8204], [8206, 8207], [8232, 8238], [8288, 8303], [65279, 65279]]), "g");
+function cleanText(s, max){ return String(s == null ? "" : s).replace(INVIS, "").replace(/\s+/g, " ").trim().slice(0, max); }
+const clone = o => JSON.parse(JSON.stringify(o));
+const bytes = o => new TextEncoder().encode(JSON.stringify(o)).length;
+function cleanAvatar(s){
+  s = String(s == null ? "" : s).replace(AV_STRIP, "").trim();
+  if (!s) return "";
+  let g; try { g = Array.from(new Intl.Segmenter("es", { granularity: "grapheme" }).segment(s), x => x.segment); } catch (e) { g = Array.from(s); }
+  let out = g.filter(x => x.trim()).slice(0, 2).join("").toUpperCase();
+  while (out && new TextEncoder().encode(out).length > 32) out = Array.from(out).slice(0, -1).join("");
+  return out;
+}
+function initials(n){ const w = String(n || "").trim().split(/\s+/).filter(Boolean); if (!w.length) return "?"; return (Array.from(w[0])[0] + (w[1] ? Array.from(w[1])[0] : "")).toUpperCase(); }
+const avHue = name => parseInt(hash(name || "?").slice(-4), 36) % 360;
+const isEmo = a => !/[\p{L}\p{N}]/u.test(a);
+function avHTML(p, size){
+  const name = (p && p.n) || ""; const a = (p && p.a) || initials(name);
+  return `<span class="av${size ? " " + size : ""}${isEmo(a) ? " emo" : ""}" style="--h:${avHue(name)}" aria-hidden="true">${esc(a)}</span>`;
+}
+const AV_PRESETS = ["🐟","🛶","🐴","🫒","🐦","💪","🎤","🏎️","🎉","📋","🥩","🐙","☕","🌧️","🦆","🦘","🐗","🤖","🐳","☸️","✈️","🎸","🐈","🦖"];
+function store(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+function load(k){ try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch (e) { return null; } }
+function unstore(k){ try { localStorage.removeItem(k); } catch (e) {} }
+function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+async function waitFor(fn, ms){ const t0 = Date.now(); while (!fn() && Date.now() - t0 < ms) await sleep(60); return fn(); }
+let toastT = 0;
+function toast(msg){ const el = $("#toast"); el.textContent = msg; el.classList.add("on"); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove("on"), 2600); }
+const htmlCache = new WeakMap();
+function setHTML(el, html){ if (htmlCache.get(el) === html) return; htmlCache.set(el, html); el.innerHTML = html; }
+function pickLang(){
+  const saved = load("cxc:lang"); if (LANGS.includes(saved)) return saved;
+  const n = String((navigator.languages && navigator.languages[0]) || navigator.language || "es").toLowerCase();
+  if (n.startsWith("gl")) return "gl"; if (n.startsWith("pt")) return "pt"; return "es";
+}
+
+/* ---------- Texto de cartas ---------- */
+function lowerable(w){ if (!w || KEEP.has(w)) return false; if (!/^\p{Lu}/u.test(w)) return false; return !/\p{Lu}/u.test(w.slice(1)); }
+function adapt(a, before){
+  let s = String(a).trim();
+  if (/[^.]\.$/.test(s)) s = s.slice(0, -1);
+  const b = before.trimEnd();
+  const atStart = b === "" || /[.?!¿¡]$/.test(b);
+  const first = s.split(/[\s,]/)[0];
+  if (!atStart && lowerable(first)) s = s.charAt(0).toLowerCase() + s.slice(1);
+  return s;
+}
+function blackHTML(blk){ return blk.t.split("___").map(esc).join('<span class="blank"></span>'); }
+function fillHTML(blk, answers){
+  const parts = blk.t.split("___");
+  let out = esc(parts[0]);
+  for (let i = 1; i < parts.length; i++) {
+    let seg = parts[i];
+    const a = answers[i - 1];
+    if (a != null && a !== "") {
+      const s = adapt(a, parts[i - 1]);
+      if (/[?!"»…]$/.test(s) && seg.startsWith(".")) seg = seg.slice(1);
+      out += "<mark>" + esc(s) + "</mark>";
+    } else out += '<span class="blank"></span>';
+    out += esc(seg);
+  }
+  return out;
+}
+function answersOf(sub){ if (!sub) return []; const ids = decList(sub[0]); return ids.map(c => c === BLANK ? (sub[1] || "…") : W(c)); }
+function blackCard(blk, big){ return `<div class="card black${big ? " bigblack" : ""}"><p>${blackHTML(blk)}</p><span class="foot"><span>${esc(t("brand"))}</span>${blk.p > 1 ? `<span class="pick">${esc(t("pick2Pill"))}</span>` : ""}</span></div>`; }
+
+/* ---------- Estado ---------- */
+const S = {
+  room: null, nroom: null, unsubGame: null,
+  me: { peer: null, by: null, key: null },
+  code: "", name: "", mode: "", avatar: "",
+  st: null, isHost: false, stale: false, myPres: {},
+  sel: [], blankText: "", pickIdx: -1, remoArm: false, remoT: 0,
+  hostGoneAt: 0, czarGoneAt: 0, resAt: 0, joinAt: 0,
+  notFound: false, err: "", advert: "", hvT: 0, saveT: 0, openRooms: [],
+};
+function validState(st){ return !!st && typeof st === "object" && st.v === 1 && Array.isArray(st.pl) && typeof st.ep === "number" && typeof st.ver === "number" && typeof st.ph === "string" && st.code === S.code; }
+// >0 si a manda sobre b
+function cmp(a, b){ if (!b) return 1; if (!a) return -1; if (a.ep !== b.ep) return a.ep - b.ep; if (a.h !== b.h) return a.h < b.h ? 1 : -1; return a.ver - b.ver; }
+const activeSeats = st => st.pl.map((p, i) => i).filter(i => !st.pl[i].x);
+const handOf = (st, i) => decList(st.pl[i] ? st.pl[i].h : "");
+function mySeat(st){ st = st || S.st; if (!st || !S.me.key) return -1; return st.pl.findIndex(p => p.k === S.me.key && !p.x); }
+function presentKeys(){ const set = new Set(); if (!S.nroom) return set; for (const p of S.nroom.peers()) if (p.kind === "viewer") set.add(keyOf(p)); return set; }
+function presenceMap(){
+  const m = new Map(); if (!S.nroom) return m;
+  for (const p of S.nroom.peers()) { if (p.kind !== "viewer") continue; m.set(keyOf(p), p.sameTab ? S.myPres : (p.presence || {})); }
+  if (S.me.key && !m.has(S.me.key)) m.set(S.me.key, S.myPres);
+  return m;
+}
+const handSize = n => Math.max(4, Math.min(10, Math.floor(WCOUNT / Math.max(n, 3))));
+
+/* ---------- Presencia ---------- */
+function setMyPres(patch){
+  for (const k in patch) { if (patch[k] === null) delete S.myPres[k]; else S.myPres[k] = patch[k]; }
+  if (S.nroom) S.nroom.presence(patch).catch(e => console.warn("presence", e && e.code, e && e.message));
+}
+function scheduleHv(){
+  clearTimeout(S.hvT);
+  S.hvT = setTimeout(() => { if (!S.st || S.isHost) return; const hv = S.myPres.hv; if (!hv || hv[0] !== S.st.ep || hv[1] !== S.st.ver) setMyPres({ hv: [S.st.ep, S.st.ver] }); }, 1200);
+}
+function saveState(){
+  if (S.saveT) return;
+  S.saveT = setTimeout(() => { S.saveT = 0; if (S.st && S.code) store("cxc:st:" + S.code, { t: Date.now(), st: S.st }); }, 1500);
+}
+function advertise(){
+  if (!S.room) return;
+  let v = null;
+  if (S.isHost && S.st && S.nroom) { const me = S.st.pl.find(p => p.k === S.me.key); v = { c: S.code, n: activeSeats(S.st).length, g: S.st.ph === "lobby" ? 0 : 1, hn: me ? me.n : S.name }; }
+  const sig = JSON.stringify(v); if (sig === S.advert) return; S.advert = sig;
+  S.room.presence({ open: v }).catch(() => {});
+}
+
+/* ---------- Anfitrión ---------- */
+function newState(code){ return { v: 1, ep: 1, ver: 0, h: S.me.key, code, ph: "lobby", cfg: { t: 5, b: 2 }, hs: 10, pl: [], r: 0, cz: -1, bk: -1, ub: "", sb: {}, rv: [], w: -1, wr: 0 }; }
+function publish(){
+  const st = S.st; st.ver++; st.h = S.me.key;
+  const snap = clone(st);
+  if (bytes(Object.assign({}, S.myPres, { st: snap })) > 3900) {
+    for (const k in snap.sb) snap.sb[k][1] = String(snap.sb[k][1] || "").slice(0, 20);
+    for (const p of snap.pl) p.n = p.n.slice(0, 10);
+    if (bytes(Object.assign({}, S.myPres, { st: snap })) > 3900) for (const p of snap.pl) p.a = "";
+  }
+  setMyPres({ st: snap, hv: [st.ep, st.ver] });
+  saveState(); advertise(); render();
+}
+function becomeHost(base){
+  const st = clone(base);
+  st.ep = (st.ep || 0) + 1; st.h = S.me.key;
+  S.st = st; S.isHost = true; S.stale = false; S.hostGoneAt = 0; S.czarGoneAt = 0;
+  if (st.ph === "res") S.resAt = Date.now() - RES_MS + 4000;
+  publish(); hostSync();
+}
+function uniqueName(st, n, k){
+  const taken = new Set(st.pl.filter(p => p.k !== k && !p.x).map(p => p.n.toLowerCase()));
+  if (!taken.has(n.toLowerCase())) return n;
+  for (let i = 2; i < 40; i++) { const c = n.slice(0, 13) + " " + i; if (!taken.has(c.toLowerCase())) return c; }
+  return n;
+}
+function poolWhite(st, extraUsed){
+  const used = new Set(extraUsed || []);
+  st.pl.forEach(p => decList(p.h).forEach(c => used.add(c)));
+  Object.values(st.sb || {}).forEach(s => decList(s[0]).forEach(c => used.add(c)));
+  const pool = []; for (let i = 0; i < WCOUNT; i++) if (!used.has(i)) pool.push(i);
+  return shuffle(pool);
+}
+function refill(st, i, avoid){
+  const hand = handOf(st, i); const need = st.hs - hand.length;
+  if (need > 0) { let pool = poolWhite(st, avoid); if (pool.length < need && avoid) pool = pool.concat(shuffle(avoid.filter(c => !hand.includes(c)))); hand.push(...pool.slice(0, need)); st.pl[i].h = encList(hand); }
+}
+function drawBlack(st){
+  let used = new Set(decList(st.ub));
+  if (used.size >= BLACK.length) { st.ub = ""; used = new Set(); }
+  const pool = []; for (let i = 0; i < BLACK.length; i++) if (!used.has(i)) pool.push(i);
+  const b = pool[Math.floor(Math.random() * pool.length)]; st.ub += enc(b); return b;
+}
+function nextCzar(st){
+  const present = presentKeys(); const n = st.pl.length;
+  for (let step = 1; step <= n; step++) { const i = (((st.cz + step) % n) + n) % n; if (!st.pl[i].x && present.has(st.pl[i].k)) return i; }
+  const seats = activeSeats(st); return seats.length ? seats[0] : 0;
+}
+function nextRound(st){
+  st.sb = {}; st.rv = []; st.w = -1; st.wr = 0;
+  const seats = activeSeats(st);
+  const max = seats.reduce((m, i) => Math.max(m, st.pl[i].s), 0);
+  if (st.r > 0 && max >= st.cfg.t) { st.ph = "end"; return; }
+  for (const i of seats) refill(st, i);
+  st.r++; st.cz = nextCzar(st); st.bk = drawBlack(st); st.ph = "play"; S.czarGoneAt = 0;
+}
+function toJudge(st){ st.rv = shuffle(Object.keys(st.sb).map(Number)); st.ph = "judge"; S.czarGoneAt = 0; }
+function award(st, seat, random){ st.w = seat; st.wr = random ? 1 : 0; if (st.pl[seat]) st.pl[seat].s++; st.ph = "res"; S.resAt = Date.now(); }
+function startGame(st){
+  const seats = activeSeats(st); if (seats.length < 3) return;
+  st.hs = handSize(seats.length);
+  for (const i of seats) Object.assign(st.pl[i], { s: 0, g: 0, b: st.cfg.b, h: "" });
+  st.r = 0; st.cz = -1; st.ub = ""; st.sb = {}; st.rv = []; st.w = -1; st.wr = 0;
+  nextRound(st);
+}
+function newGame(st){
+  const present = presentKeys();
+  st.pl = st.pl.filter(p => !p.x && present.has(p.k)).map(p => ({ k: p.k, n: p.n, a: p.a || "", s: 0, b: 0, g: 0, h: "" }));
+  Object.assign(st, { ph: "lobby", r: 0, cz: -1, bk: -1, ub: "", sb: {}, rv: [], w: -1, wr: 0 });
+}
+function hostSync(){
+  if (!S.isHost || !S.st || !S.nroom) return;
+  const st = S.st; let ch = false;
+  const pres = presenceMap();
+  const inGame = st.ph !== "lobby" && st.ph !== "end";
+  if (st.ph === "lobby") { const keep = st.pl.filter(p => pres.has(p.k)); if (keep.length !== st.pl.length) { st.pl = keep; ch = true; } }
+  for (const [k, pr] of pres) {
+    const n = cleanText(pr.n, 16); if (!n) continue;
+    const i = st.pl.findIndex(p => p.k === k);
+    if (i < 0) {
+      if (activeSeats(st).length >= MAX_PLAYERS) continue;
+      st.pl.push({ k, n: uniqueName(st, n, k), a: cleanAvatar(pr.a), s: 0, b: inGame ? st.cfg.b : 0, g: 0, h: "" });
+      if (inGame) refill(st, st.pl.length - 1);
+      ch = true;
+    } else {
+      const p = st.pl[i];
+      if (p.x && activeSeats(st).length < MAX_PLAYERS) { p.x = 0; if (inGame) refill(st, i); ch = true; }
+      if (p.n !== n && uniqueName(st, n, k) === n) { p.n = n; ch = true; }
+      const av = cleanAvatar(pr.a); if ((p.a || "") !== av) { p.a = av; ch = true; }
+    }
+  }
+  if (st.ph === "play") {
+    const blk = BLACK[st.bk];
+    for (const i of activeSeats(st)) {
+      if (i === st.cz) continue;
+      const p = st.pl[i]; const pr = pres.get(p.k); if (!pr) continue;
+      if (pr.remo === st.r && !p.g && !st.sb[i]) { const old = handOf(st, i); p.h = ""; p.g = 1; refill(st, i, old); ch = true; }
+      const sub = pr.sub;
+      if (sub && sub.r === st.r && !st.sb[i]) {
+        const ids = decList(sub.c); const hand = handOf(st, i);
+        const nBlank = ids.filter(c => c === BLANK).length; const text = cleanText(sub.t, 60);
+        const ok = ids.length === blk.p && nBlank <= 1 && (nBlank === 0 || (p.b > 0 && text)) && new Set(ids).size === ids.length && ids.every(c => c === BLANK || hand.includes(c));
+        if (ok) { st.sb[i] = [encList(ids), nBlank ? text : ""]; p.h = encList(hand.filter(c => !ids.includes(c))); if (nBlank) p.b--; ch = true; }
+      }
+    }
+    const waiting = activeSeats(st).filter(i => i !== st.cz && pres.has(st.pl[i].k) && !st.sb[i]);
+    if (Object.keys(st.sb).length > 0 && waiting.length === 0) { toJudge(st); ch = true; }
+  } else if (st.ph === "judge") {
+    const cz = st.pl[st.cz]; const pr = cz && pres.get(cz.k);
+    if (pr && pr.pick && pr.pick.r === st.r && Number.isInteger(pr.pick.i) && pr.pick.i >= 0 && pr.pick.i < st.rv.length) { award(st, st.rv[pr.pick.i], false); ch = true; }
+    else if (!pr || cz.x) { if (!S.czarGoneAt) S.czarGoneAt = Date.now(); else if (Date.now() - S.czarGoneAt > 25000 && st.rv.length) { award(st, st.rv[Math.floor(Math.random() * st.rv.length)], true); ch = true; } }
+    else S.czarGoneAt = 0;
+  } else if (st.ph === "res") {
+    if (!S.resAt) S.resAt = Date.now();
+    if (Date.now() - S.resAt > RES_MS) { nextRound(st); ch = true; }
+  }
+  if (ch) publish(); else advertise();
+}
+function hostDo(op, arg){
+  if (!S.isHost || !S.st) return;
+  const st = S.st;
+  if (op === "start" && st.ph === "lobby") startGame(st);
+  else if (op === "cfg" && st.ph === "lobby") st.cfg[arg.k] = arg.v;
+  else if (op === "judge" && st.ph === "play" && Object.keys(st.sb).length) toJudge(st);
+  else if (op === "skip" && (st.ph === "play" || st.ph === "judge")) nextRound(st);
+  else if (op === "random" && st.ph === "judge" && st.rv.length) award(st, st.rv[Math.floor(Math.random() * st.rv.length)], true);
+  else if (op === "next" && st.ph === "res") nextRound(st);
+  else if (op === "again" && st.ph === "end") newGame(st);
+  else if (op === "remove") {
+    const p = st.pl[arg]; if (!p || p.k === S.me.key) return;
+    p.x = 1; p.h = "";
+    if (st.ph === "play") { delete st.sb[arg]; if (arg === st.cz) nextRound(st); }
+  } else return;
+  publish(); hostSync();
+}
+
+/* ---------- Seguidores y relevo ---------- */
+function adopt(st){
+  const prev = S.st; S.st = st;
+  if (!prev || prev.r !== st.r) { S.sel = []; S.blankText = ""; S.pickIdx = -1; S.remoArm = false; const b = $("#blankIn"); if (b) b.value = ""; }
+  if (st.ph === "judge" && (!prev || prev.ph !== "judge")) S.pickIdx = -1;
+  scheduleHv(); saveState();
+}
+function onGamePeers(ch){
+  if (!S.nroom) return;
+  const peers = (ch && ch.peers) || S.nroom.peers();
+  const mine = peers.find(p => p.sameTab);
+  if (mine) S.me = { peer: mine.peer, by: mine.by, key: keyOf(mine) };
+  let best = null;
+  for (const p of peers) { if (p.sameTab || p.kind !== "viewer") continue; const st = p.presence && p.presence.st; if (validState(st) && cmp(st, best) > 0) best = st; }
+  if (best) S.hostGoneAt = 0;
+  if (S.isHost) {
+    if (best && cmp(best, S.st) > 0) { S.isHost = false; setMyPres({ st: null }); adopt(best); advertise(); }
+  } else if (best && (S.stale || cmp(best, S.st) >= 0)) { S.stale = false; adopt(best); }
+  if (S.isHost) hostSync();
+  render();
+}
+function electionTick(){
+  if (S.isHost || !S.nroom || !S.st) return;
+  const peers = S.nroom.peers();
+  if (peers.some(p => !p.sameTab && p.presence && validState(p.presence.st))) { S.hostGoneAt = 0; return; }
+  if (!S.hostGoneAt) { S.hostGoneAt = Date.now(); return; }
+  if (Date.now() - S.hostGoneAt < TAKEOVER_MS) return;
+  const st = S.st;
+  const cands = peers.filter(p => p.kind === "viewer").map(p => {
+    const pr = p.sameTab ? S.myPres : (p.presence || {});
+    const hv = Array.isArray(pr.hv) ? pr.hv : (p.sameTab ? [st.ep, st.ver] : [0, 0]);
+    const k = keyOf(p); const seat = st.pl.findIndex(x => x.k === k && !x.x);
+    return { me: p.sameTab, hv, seat: seat < 0 ? 999 : seat, k };
+  });
+  cands.sort((a, b) => (b.hv[0] - a.hv[0]) || (b.hv[1] - a.hv[1]) || (a.seat - b.seat) || (a.k < b.k ? -1 : 1));
+  if (cands[0] && cands[0].me) becomeHost(st);
+}
+function tick(){
+  if (!S.nroom) return;
+  if (S.isHost) hostSync(); else electionTick();
+  if (!S.st && S.mode === "join" && Date.now() - S.joinAt > 7000) S.notFound = true;
+  render();
+}
+
+/* ---------- Entrar y salir ---------- */
+function genCode(){ const A = "ABCDEFGHJKLMNPQRSTUVWXYZ"; let c = ""; for (let i = 0; i < 4; i++) c += A[Math.floor(Math.random() * A.length)]; return c; }
+function joinErrorText(e){
+  const c = e && e.code;
+  if (c === "not_permitted") return t("errNotPermitted");
+  if (c === "limit_reached") return t("errLimit");
+  return t("errJoin");
+}
+async function enterRoom(code, name, mode){
+  code = String(code || "").toUpperCase(); name = cleanText(name, 16);
+  if (!S.room) return;
+  if (!/^[A-Z]{4}$/.test(code)) { homeError(t("errCode")); return; }
+  if (!name) { homeError(t("errName")); $("#nameIn").focus(); return; }
+  homeError("");
+  let nr;
+  try { nr = await S.room.join("cxc-" + code.toLowerCase()); }
+  catch (e) { homeError(joinErrorText(e)); return; }
+  Object.assign(S, { nroom: nr, code, name, mode, st: null, isHost: false, stale: false, myPres: {}, sel: [], blankText: "", pickIdx: -1, hostGoneAt: 0, czarGoneAt: 0, resAt: 0, joinAt: Date.now(), notFound: false, err: "" });
+  const mine = nr.peers().find(p => p.sameTab);
+  if (mine) S.me = { peer: mine.peer, by: mine.by, key: keyOf(mine) };
+  S.unsubGame = nr.onPeers(onGamePeers, () => { S.err = "lost"; render(); });
+  setMyPres({ n: name, a: S.avatar, j: S.joinAt });
+  store("cxc:last", { code, name, t: Date.now() });
+  store("cxc:name", name);
+  render();
+  if (mode === "create") {
+    await waitFor(() => !!S.me.key, 4000);
+    await sleep(900);
+    const taken = nr.peers().some(p => !p.sameTab && p.presence && p.presence.st);
+    if (taken) { await leaveRoom(true); return enterRoom(genCode(), name, "create"); }
+    S.st = newState(code); S.isHost = true; publish(); hostSync();
+  } else {
+    const saved = load("cxc:st:" + code);
+    if (!S.st && saved && saved.t && Date.now() - saved.t < 6 * 3600e3 && validState(saved.st)) { S.st = saved.st; S.stale = true; setMyPres({ hv: [saved.st.ep, saved.st.ver] }); render(); }
+  }
+}
+async function leaveRoom(silent){
+  const nr = S.nroom; if (!nr) return;
+  if (S.unsubGame) { try { S.unsubGame(); } catch (e) {} S.unsubGame = null; }
+  S.nroom = null; S.isHost = false; S.st = null; S.myPres = {}; S.sel = [];
+  if (!silent) unstore("cxc:last");
+  advertise();
+  try { await nr.leave(); } catch (e) {}
+  render();
+}
+
+/* ---------- Acciones de jugador ---------- */
+function canPlay(st){
+  st = st || S.st; const me = mySeat(st);
+  return !!st && st.ph === "play" && me >= 0 && me !== st.cz && !st.sb[me] && !(S.myPres.sub && S.myPres.sub.r === st.r);
+}
+function toggleCard(id){
+  const st = S.st; if (!canPlay(st)) return;
+  const pick = BLACK[st.bk].p; const k = S.sel.indexOf(id);
+  if (k >= 0) S.sel.splice(k, 1);
+  else if (pick === 1) S.sel = [id];
+  else if (S.sel.length < pick) S.sel.push(id);
+  else { toast(t("pickLimit", { n: pick })); return; }
+  render();
+  if (id === BLANK && S.sel.includes(BLANK)) setTimeout(() => $("#blankIn").focus(), 30);
+}
+function sendSub(){
+  const st = S.st; if (!canPlay(st)) return;
+  const pick = BLACK[st.bk].p; if (S.sel.length !== pick) return;
+  const txt = cleanText(S.blankText, 60);
+  if (S.sel.includes(BLANK) && !txt) { toast(t("needBlank")); $("#blankIn").focus(); return; }
+  setMyPres({ sub: { r: st.r, c: encList(S.sel), t: S.sel.includes(BLANK) ? txt : "" } });
+  render();
+}
+function confirmPick(){ const st = S.st; if (!st || st.ph !== "judge" || mySeat(st) !== st.cz || S.pickIdx < 0) return; setMyPres({ pick: { r: st.r, i: S.pickIdx } }); render(); }
+function remo(){
+  const st = S.st; if (!canPlay(st)) return;
+  if (!S.remoArm) { S.remoArm = true; clearTimeout(S.remoT); S.remoT = setTimeout(() => { S.remoArm = false; render(); }, 4000); render(); return; }
+  S.remoArm = false; S.sel = []; setMyPres({ remo: st.r }); toast(t("remoToast")); render();
+}
+async function copyCode(){
+  const c = S.code; if (!c) return;
+  try { await navigator.clipboard.writeText(c); toast(t("copied", { c })); }
+  catch (e) { toast(t("codeIs", { c })); }
+}
+
+/* ---------- Pintado ---------- */
+function applyStatic(){
+  document.documentElement.lang = LANG;
+  document.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = t(el.dataset.i18n); });
+  document.querySelectorAll("[data-i18n-html]").forEach(el => { el.innerHTML = t(el.dataset.i18nHtml); });
+  document.querySelectorAll("[data-i18n-ph]").forEach(el => { el.placeholder = t(el.dataset.i18nPh); });
+  document.querySelectorAll("[data-i18n-aria]").forEach(el => { el.setAttribute("aria-label", t(el.dataset.i18nAria)); });
+  document.querySelectorAll("[data-langs]").forEach(el => {
+    el.setAttribute("aria-label", t("langLabel"));
+    setHTML(el, LANGS.map(l => `<button type="button" data-act="lang" data-l="${l}" lang="${l}" aria-pressed="${l === LANG}" aria-label="${LANG_NAMES[l]}" title="${LANG_NAMES[l]}">${l.toUpperCase()}</button>`).join(""));
+  });
+  const hc = $("#heroCard"); if (hc) hc.textContent = W(HERO_W);
+}
+function setLang(l){
+  if (!LANGS.includes(l) || l === LANG) return;
+  LANG = l; store("cxc:lang", l);
+  applyStatic(); renderHome(); render();
+  if (!$("#demo").hidden) demoShow();
+}
+function homeError(msg){ const e = $("#homeErr"); e.textContent = msg; e.hidden = !msg; }
+function renderHome(){
+  const name = $("#nameIn").value.trim();
+  setHTML($("#nameChips"), NAMES.map(n => `<button type="button" class="chip" data-act="chip" data-name="${esc(n)}" aria-pressed="${n === name}">${esc(n)}</button>`).join(""));
+  const av = cleanAvatar($("#avIn").value); const shown = av || initials(name || "?");
+  const pv = $("#avPreview"); pv.textContent = shown; pv.style.setProperty("--h", String(avHue(name || "?"))); pv.classList.toggle("emo", isEmo(shown));
+  setHTML($("#avGrid"), AV_PRESETS.map(e => `<button type="button" data-act="av-pick" data-av="${esc(e)}" aria-pressed="${e.toUpperCase() === av}" aria-label="Avatar ${esc(e)}">${esc(e)}</button>`).join(""));
+  const last = load("cxc:last");
+  const rb = $("#resumeBtn");
+  if (last && last.code && Date.now() - (last.t || 0) < 6 * 3600e3 && S.room) { rb.hidden = false; rb.textContent = t("resumeRoom", { c: last.code, n: last.name }); }
+  else rb.hidden = true;
+  const list = S.openRooms;
+  $("#openWrap").hidden = !list.length;
+  setHTML($("#openList"), list.map(r => `<li><span class="code-sm">${esc(r.c)}</span><span class="who">${esc(tn("roomRow", r.n, { h: r.hn }))}${r.g ? esc(t("playing")) : ""}</span><button type="button" class="btn sm" data-act="join-open" data-code="${esc(r.c)}">${esc(t("joinBtn"))}</button></li>`).join(""));
+}
+function onLobbyPeers(){
+  if (!S.room) return;
+  const seen = new Map();
+  for (const p of S.room.peers()) {
+    const o = p.presence && p.presence.open;
+    if (p.sameTab || !o || typeof o !== "object" || !/^[A-Z]{4}$/.test(String(o.c))) continue;
+    const r = { c: o.c, n: Math.max(0, Math.min(MAX_PLAYERS, Number(o.n) || 0)), g: o.g ? 1 : 0, hn: cleanText(o.hn, 16) || t("someone") };
+    if (!seen.has(r.c) || seen.get(r.c).n < r.n) seen.set(r.c, r);
+  }
+  S.openRooms = [...seen.values()].filter(r => r.c !== S.code).slice(0, 12);
+  if (!S.nroom) renderHome();
+}
+function phaseLabel(st){
+  if (!st) return t("connecting");
+  return { lobby: t("phLobby"), play: t("phPlay", { r: st.r }), judge: t("phJudge", { r: st.r }), res: t("phRes", { r: st.r }), end: t("phEnd") }[st.ph] || "";
+}
+function render(){
+  const inGame = !!S.nroom;
+  if ($("#demo").hidden) { $("#home").hidden = inGame; }
+  $("#game").hidden = !inGame;
+  if (!inGame) { renderHome(); return; }
+  const st = S.st;
+  $("#tbCode").textContent = S.code;
+  $("#tbPhase").textContent = phaseLabel(st);
+  let msg = S.err ? t(S.err) : "";
+  if (!msg && !st) msg = S.notFound ? t("notFound", { c: S.code }) : t("connectingRoom");
+  if (!msg && S.stale) msg = t("stale");
+  if (!msg && st && mySeat(st) < 0) msg = activeSeats(st).length >= MAX_PLAYERS ? t("full") : t("entering");
+  const gm = $("#gameMsg"); gm.textContent = msg || ""; gm.hidden = !msg;
+  const views = { lobby: "#lobbyV", play: "#playV", judge: "#judgeV", res: "#resV", end: "#endV" };
+  for (const ph in views) $(views[ph]).hidden = !st || st.ph !== ph;
+  $("#boardBox").hidden = !st || st.ph === "lobby";
+  $("#tableEl").classList.toggle("solo", !st || st.ph === "lobby");
+  if (!st) { $("#hostBar").hidden = true; return; }
+  if (st.ph === "lobby") renderLobby(st);
+  else if (st.ph === "play") renderPlay(st);
+  else if (st.ph === "judge") renderJudge(st);
+  else if (st.ph === "res") renderRes(st);
+  else if (st.ph === "end") renderEnd(st);
+  renderHostBar(st); renderBoard(st);
+}
+function seg(k, opts, cur, label){
+  return `<div class="seg"><span class="label">${esc(label)}</span><div class="opts">${opts.map(v => `<button type="button" data-act="cfg" data-k="${k}" data-v="${v}" aria-pressed="${v === cur}">${v}</button>`).join("")}</div></div>`;
+}
+const youTag = () => ` <span class="tag">${esc(t("you"))}</span>`;
+const clientLine = (st, me) => { const cz = st.pl[st.cz]; return `<div class="roundline"><span class="r">${esc(t("round", { r: st.r }))}</span><span>${esc(t("client"))} ${cz ? avHTML(cz, "xs") + " " : ""}<b>${esc(cz ? cz.n : "—")}</b>${me >= 0 && st.cz === me ? esc(t("youParen")) : ""}</span></div>`; };
+function renderLobby(st){
+  const seats = activeSeats(st); const n = seats.length;
+  const host = st.pl.find(p => p.k === st.h);
+  const people = seats.map(i => { const p = st.pl[i]; return `<li class="${p.k === S.me.key ? "me" : ""}">${avHTML(p)}${esc(p.n)}${p.k === st.h ? ` <span class="tag">${esc(t("host"))}</span>` : ""}${p.k === S.me.key ? youTag() : ""}</li>`; }).join("");
+  const cfg = S.isHost
+    ? seg("t", [3, 5, 7, 10], st.cfg.t, t("ptsToWin")) + seg("b", [0, 1, 2, 3], st.cfg.b, t("blanksPer"))
+    : `<p>${tn("cfgRO", Number(st.cfg.b) || 0, { t: Number(st.cfg.t) || 0 })}</p>`;
+  const start = S.isHost
+    ? (n >= 3 ? `<button type="button" class="btn big" data-act="host" data-op="start">${esc(t("startWith", { n }))}</button>` : `<button type="button" class="btn big" disabled>${esc(tn("need", 3 - n))}</button>`)
+    : `<p class="status"><span class="big">${esc(t("waitHost", { h: host ? host.n : t("theHost") }))}</span></p>`;
+  setHTML($("#lobbyV"), `
+    <div class="codebox">
+      <span class="label">${esc(t("codeLabel"))}</span>
+      <div class="code" role="text" aria-label="${esc(t("codeLabel"))} ${esc(S.code.split("").join(" "))}">${S.code.split("").map(c => `<span>${esc(c)}</span>`).join("")}</div>
+      <button type="button" class="btn ghost sm" data-act="copy">${esc(t("copyCode"))}</button>
+      <p class="hint">${esc(t("lobbyHint"))}</p>
+    </div>
+    <div class="panel"><h2>${esc(t("inRoom"))} · ${n}/${MAX_PLAYERS}</h2><ul class="pchips">${people}</ul></div>
+    <div class="panel"><h2>${esc(t("settings"))}</h2>${cfg}<p class="hint">${esc(t("handHint", { p: Math.max(n, 3), h: handSize(n) }))}</p></div>
+    ${start}`);
+}
+function pendingNames(st){
+  const present = presentKeys();
+  return activeSeats(st).filter(i => i !== st.cz && !st.sb[i] && present.has(st.pl[i].k)).map(i => st.pl[i].n);
+}
+function renderPlay(st){
+  const me = mySeat(st); const blk = BLACK[st.bk] || BLACK[0];
+  setHTML($("#stage"), clientLine(st, me) + blackCard(blk, true));
+  const nsub = Object.keys(st.sb).length;
+  const pend = pendingNames(st);
+  const total = nsub + pend.length;
+  const pendTxt = pend.length ? `<p class="pending">${esc(t("missing", { l: pend.join(", ") }))}</p>` : "";
+  const sentPending = S.myPres.sub && S.myPres.sub.r === st.r && me >= 0 && !st.sb[me];
+  let status;
+  if (me < 0) status = `<p class="big">${esc(t("watching", { r: st.r }))}</p><p class="pending">${esc(t("sentCount", { s: nsub, n: total }))}</p>`;
+  else if (me === st.cz) status = `<p class="big">${esc(t("czarYou"))}</p><p>${esc(t("czarInfo", { s: nsub, n: total }))}</p>${pendTxt}`;
+  else if (st.sb[me]) status = `<p class="big">${esc(t("sentOk"))}</p><div class="card white" style="min-height:0;padding-bottom:16px">${fillHTML(blk, answersOf(st.sb[me]))}</div>${pendTxt}`;
+  else if (sentPending) status = `<p class="big">${esc(t("sending"))}</p><button type="button" class="linkbtn" data-act="unsend">${esc(t("rechoose"))}</button>`;
+  else status = `<p class="big">${esc(blk.p === 1 ? t("pick1") : t("pick2"))}</p>`;
+  setHTML($("#status"), status);
+  const play = canPlay(st);
+  $("#handBox").hidden = !play;
+  if (!play) return;
+  const p = st.pl[me]; const hand = handOf(st, me);
+  S.sel = S.sel.filter(id => id === BLANK ? p.b > 0 : hand.includes(id));
+  const cardsHTML = hand.map(id => { const k = S.sel.indexOf(id); return `<button type="button" class="card white" data-act="card" data-id="${id}" aria-pressed="${k >= 0}">${esc(W(id))}${k >= 0 && blk.p > 1 ? `<span class="badge">${k + 1}</span>` : ""}<span class="foot"><span>CcC</span></span></button>`; }).join("");
+  const kb = S.sel.indexOf(BLANK);
+  const blankHTML = p.b > 0 ? `<button type="button" class="card blankcard" data-act="card" data-id="${BLANK}" aria-pressed="${kb >= 0}">${esc(t("blankCard"))}<small>${esc(tn("blankLeft", p.b))}</small>${kb >= 0 && blk.p > 1 ? `<span class="badge">${kb + 1}</span>` : ""}</button>` : "";
+  setHTML($("#hand"), cardsHTML + blankHTML);
+  $("#blankBox").hidden = kb < 0;
+  const rb = $("#remoBtn");
+  rb.hidden = !!p.g;
+  rb.textContent = S.remoArm ? t("remoArm") : t("remo");
+  rb.classList.toggle("warn", S.remoArm);
+  renderPreview();
+}
+function renderPreview(){
+  const st = S.st; if (!st || st.ph !== "play") return;
+  const blk = BLACK[st.bk] || BLACK[0];
+  const answers = S.sel.map(id => id === BLANK ? cleanText(S.blankText, 60) : W(id));
+  setHTML($("#preview"), S.sel.length ? `<span class="label">${esc(t("readAs"))}</span><div class="card white">${fillHTML(blk, answers)}</div>` : "");
+  const ready = S.sel.length === blk.p && (!S.sel.includes(BLANK) || !!cleanText(S.blankText, 60));
+  $("#sendBtn").disabled = !ready;
+  $("#blankCount").textContent = (S.blankText || "").length + "/60";
+}
+function renderJudge(st){
+  const me = mySeat(st); const blk = BLACK[st.bk] || BLACK[0]; const cz = st.pl[st.cz];
+  const isCz = me === st.cz && me >= 0;
+  const picking = isCz && S.myPres.pick && S.myPres.pick.r === st.r;
+  const head = isCz
+    ? `<p class="big">${esc(picking ? t("signing") : t("judgeCz"))}</p>`
+    : `<p class="big">${esc(t("judgeOther", { c: cz ? cz.n : t("theClient") }))}</p>`;
+  const list = st.rv.map((seat, i) => `<li><button type="button" class="card white${S.pickIdx === i ? " sel" : ""}" data-act="pick" data-i="${i}" ${isCz && !picking ? "" : "disabled"} aria-pressed="${S.pickIdx === i}">${fillHTML(blk, answersOf(st.sb[seat]))}</button></li>`).join("");
+  const btn = isCz ? `<button type="button" class="btn big" data-act="confirm" ${S.pickIdx >= 0 && !picking ? "" : "disabled"}>${esc(t("signBtn"))}</button>` : "";
+  setHTML($("#judgeV"), `<div>${clientLine(st, me)}${blackCard(blk, true)}</div><div class="status">${head}</div><ul class="subs">${list}</ul>${btn}`);
+}
+function renderRes(st){
+  const blk = BLACK[st.bk] || BLACK[0]; const w = st.pl[st.w];
+  const others = st.rv.filter(s => s !== st.w).map(seat => `<li><div class="card white">${fillHTML(blk, answersOf(st.sb[seat]))}<span class="who">${st.pl[seat] ? avHTML(st.pl[seat], "xs") : ""}${esc(st.pl[seat] ? st.pl[seat].n : "")}</span></div></li>`).join("");
+  setHTML($("#resV"), `
+    ${clientLine(st, -1)}
+    <div class="winner">
+      <div class="card white wincard">${fillHTML(blk, answersOf(st.sb[st.w]))}<span class="stamp">${esc(t("stamp"))}</span></div>
+      <p class="win-line">${w ? avHTML(w, "md") : ""}<span>${esc(t("wins", { n: w ? w.n : t("someone") }))}${w && w.k === S.me.key ? esc(t("youWin")) : ""}.</span></p>
+      ${st.wr ? `<p class="hint">${esc(t("randomPick"))}</p>` : ""}
+      <div class="countdown" data-round="${st.r}"><span></span></div>
+      <p class="hint">${esc(t("nextSoon"))}</p>
+    </div>
+    ${others ? `<h3>${esc(t("others"))}</h3><ul class="subs">${others}</ul>` : ""}`);
+}
+function renderEnd(st){
+  const seats = activeSeats(st).sort((a, b) => st.pl[b].s - st.pl[a].s);
+  const max = seats.length ? st.pl[seats[0]].s : 0;
+  const champSeats = seats.filter(i => st.pl[i].s === max); const champs = champSeats.map(i => st.pl[i].n);
+  const title = champs.length === 1 ? t("gameWon", { n: champs[0] }) : t("tie", { l: champs.join(t("and")) });
+  setHTML($("#endV"), `
+    <div class="card black bigblack"><div class="champ-av">${champSeats.map(i => avHTML(st.pl[i], "xl")).join("")}</div><p class="eyebrow" style="color:inherit;opacity:.6">${esc(t("contractClosed"))}</p><p class="champ" style="margin-top:10px">${esc(title)}</p><p style="margin-top:8px;font-weight:600;font-size:18px">${esc(tn("withPts", max))}</p><span class="foot"><span>${esc(t("brand"))}</span><span>${esc(tn("rounds", st.r))}</span></span></div>
+    <div class="panel"><h2>${esc(t("ranking"))}</h2><ol class="rank">${seats.map(i => `<li><span>${avHTML(st.pl[i])}${esc(st.pl[i].n)}</span><span class="pts">${st.pl[i].s}</span></li>`).join("")}</ol></div>
+    ${S.isHost ? "" : `<p class="hint">${esc(t("waitAgain"))}</p>`}`);
+}
+function renderHostBar(st){
+  const hb = $("#hostBar");
+  if (!S.isHost || st.ph === "lobby") { hb.hidden = true; return; }
+  hb.hidden = false;
+  const nsub = Object.keys(st.sb).length;
+  const czPresent = st.pl[st.cz] && presentKeys().has(st.pl[st.cz].k);
+  let b = `<span class="label">${esc(t("hostCtl"))}</span>`;
+  if (st.ph === "play") b += `<button type="button" class="btn sm" data-act="host" data-op="judge" ${nsub ? "" : "disabled"}>${esc(t("toJudge", { n: nsub }))}</button><button type="button" class="btn ghost sm" data-act="host" data-op="skip">${esc(t("skip"))}</button>`;
+  else if (st.ph === "judge") b += `${czPresent ? "" : `<button type="button" class="btn sm" data-act="host" data-op="random">${esc(t("randomBtn"))}</button>`}<button type="button" class="btn ghost sm" data-act="host" data-op="skip">${esc(t("skip"))}</button>`;
+  else if (st.ph === "res") b += `<button type="button" class="btn sm" data-act="host" data-op="next">${esc(t("nextNow"))}</button>`;
+  else if (st.ph === "end") b += `<button type="button" class="btn sm" data-act="host" data-op="again">${esc(t("newGame"))}</button>`;
+  setHTML(hb, b);
+}
+function renderBoard(st){
+  const present = presentKeys();
+  const rows = activeSeats(st).map(i => {
+    const p = st.pl[i]; const on = present.has(p.k);
+    let sub = on ? "" : t("disconnected");
+    if (on && st.ph === "play" && i !== st.cz) sub = st.sb[i] ? t("propSent") : t("thinking");
+    const tags = [p.k === st.h ? t("host") : "", p.k === S.me.key ? t("you") : ""].filter(Boolean).join(" · ");
+    const rm = S.isHost && !on && p.k !== S.me.key ? ` <button type="button" class="linkbtn" data-act="remove" data-i="${i}">${esc(t("remove"))}</button>` : "";
+    const isCz = i === st.cz && (st.ph === "play" || st.ph === "judge");
+    return `<li class="${on ? "" : "off"}">${avHTML(p)}<span class="nm">${esc(p.n)}${isCz ? `<span class="cztag">${esc(t("clientTag"))}</span>` : ""}<span class="sub">${esc([tags, sub].filter(Boolean).join(" · "))}${rm}</span></span><span class="pts">${p.s}</span></li>`;
+  }).join("");
+  setHTML($("#board"), rows);
+}
+
+/* ---------- Demo: partida de ejemplo ---------- */
+const bi = es => BLACK.findIndex(b => b.r[0] === es);
+const wi = es => { const k = WHITE_T.findIndex(r => r[0] === es); return k < 0 ? -1 : NW + k; };
+const HERO_W = wi("Un PoC que lleva tres años en producción.");
+const DP = ["Vane", "Jorge", "María", "Jesús"];
+const DAV = { "Vane": "📋", "Jorge": "💪", "María": "🎤", "Jesús": "🎉" };
+const dp = n => ({ n, a: DAV[n] || "" });
+const B1 = bi("El cliente ha rechazado la entrega por culpa de ___.");
+const H1 = ["Un dashboard que nadie va a abrir.", "Jesús organizando la cena de Navidad en septiembre.", "Un ganso con mala leche.", "La VPN del cliente.", "Un git push --force en viernes."].map(wi);
+const S1 = [["Jorge", wi("Un YAML de 3.000 líneas.")], ["María", wi("Un ganso con mala leche.")], ["Jesús", wi("Un CSS que solo funciona en el portátil de Jesús.")]];
+const B2 = bi("Lo vendimos como ___ y entregamos ___.");
+const H2 = ["Un agente de IA con acceso a producción.", "Los pájaros de Brais.", "Un Excel con macros de 2009.", "El café de la ofi.", "Kubernetes, porque sí."].map(wi);
+const B3 = bi("Excusa para no encender la cámara: ___.");
+const H3 = ["Un pod en CrashLoopBackOff.", "El jueves de oficina.", "Una factura a 120 días."].map(wi);
+const S3 = [["Jorge", wi("Pijama de cintura para abajo.")], ["Vane", -1], ["Jesús", wi("Un gato paseando por el teclado en plena demo.")]];
+const dTxt = id => (id < 0 ? t("demoV3") : W(id));
+function dCard(text, o){ o = o || {}; return `<div class="card white${o.sel ? " is-sel" : ""}${o.pop ? " pop" : ""}" style="--d:${o.d || 0}ms">${esc(text)}${o.badge ? `<span class="badge">${o.badge}</span>` : ""}${o.tap ? '<span class="tap"></span>' : ""}<span class="foot"><span>CcC</span></span></div>`; }
+function dFill(bk, answers, o){ o = o || {}; return `<div class="card white${o.stamp ? " wincard" : ""}${o.sel ? " is-sel" : ""}${o.pop ? " pop" : ""}" style="--d:${o.d || 0}ms">${fillHTML(BLACK[bk], answers)}${o.who ? `<span class="who">${avHTML(dp(o.who), "xs")}${esc(o.who)}</span>` : ""}${o.stamp ? `<span class="stamp">${esc(t("stamp"))}</span>` : ""}${o.tap ? '<span class="tap"></span>' : ""}</div>`; }
+function dBoard(sc, bump){ return `<ol class="demo-board" aria-label="${esc(t("board"))}">${DP.slice().sort((a, b) => (sc[b] || 0) - (sc[a] || 0)).map(n => `<li class="${n === bump ? "bump" : ""}"><span class="dn">${avHTML(dp(n), "xs")}${esc(n)}</span><span class="pts">${sc[n] || 0}</span></li>`).join("")}</ol>`; }
+const dRound = (r, cz) => `<div class="roundline"><span class="r">${esc(t("round", { r }))}</span><span>${esc(t("client"))} ${avHTML(dp(cz), "xs")} <b>${esc(cz)}</b></span></div>`;
+const dWho = s => `<p class="demo-who">${esc(s)}</p>`;
+const dBtn = (s, d) => `<div class="pop" style="--d:${d || 0}ms"><span class="btn big">${esc(s)}</span></div>`;
+const dWin = n => `<p class="win-line">${avHTML(dp(n), "md")}<span>${esc(t("wins", { n }))}.</span></p>`;
+const DEMO = [
+  { cap: "d1", dur: 3400, html: () => `<div class="pop"><div class="card black bigblack"><p class="wordmark">${t("wordmark")}</p><span class="foot"><span>${esc(t("demoTitle"))}</span><span>${esc(t("demoTo3"))}</span></span></div></div>` },
+  { cap: "d2", dur: 4400, html: () => `<div class="codebox"><span class="label">${esc(t("codeLabel"))}</span><div class="code">${"DEMO".split("").map(c => `<span>${c}</span>`).join("")}</div></div><ul class="pchips">${DP.map((n, i) => `<li class="pop" style="--d:${300 + i * 450}ms">${avHTML(dp(n))}${esc(n)}${i === 0 ? ` <span class="tag">${esc(t("hostF"))}</span>` : ""}</li>`).join("")}</ul><p class="hint pop" style="--d:2300ms">${esc(t("demoPlays3"))}</p>` },
+  { cap: "d3", dur: 3800, html: () => dRound(1, "Vane") + `<div class="pop">${blackCard(BLACK[B1], true)}</div>` },
+  { cap: "d4", dur: 4000, html: () => dWho(t("demoScreen", { n: "María" })) + blackCard(BLACK[B1], false) + `<div class="hand demo-hand">${H1.map((id, i) => dCard(W(id), { pop: true, d: i * 120 })).join("")}</div>` },
+  { cap: "d5", dur: 4600, html: () => dWho(t("demoScreen", { n: "María" })) + `<div class="hand demo-hand">${H1.map((id, i) => dCard(W(id), { sel: i === 2, tap: i === 2 })).join("")}</div><div class="preview pop" style="--d:700ms"><span class="label">${esc(t("readAsF"))}</span>${dFill(B1, [W(H1[2])])}</div>` + dBtn(t("sendToClientF"), 1600) },
+  { cap: "d6", dur: 3800, html: () => dRound(1, "Vane") + `<ul class="demo-ticks">${["Jorge", "María", "Jesús"].map((n, i) => `<li class="pop" style="--d:${i * 700}ms">${avHTML(dp(n))}${esc(n)}<span class="ok">${esc(t("propSent"))}</span></li>`).join("")}</ul>` },
+  { cap: "d7", dur: 4400, html: () => dWho(t("demoScreenClientF", { n: "Vane" })) + blackCard(BLACK[B1], false) + `<div class="subs">${S1.map((s, i) => dFill(B1, [W(s[1])], { pop: true, d: i * 600 })).join("")}</div>` },
+  { cap: "d8", dur: 3200, html: () => dWho(t("demoScreenClientF", { n: "Vane" })) + `<div class="subs">${S1.map((s, i) => dFill(B1, [W(s[1])], { sel: i === 1, tap: i === 1 })).join("")}</div>` + dBtn(t("signBtn"), 900) },
+  { cap: "d9", dur: 5600, html: () => `<div class="winner">${dFill(B1, [W(S1[1][1])], { stamp: true })}${dWin("María")}</div><div class="subs">${[S1[0], S1[2]].map((s, i) => dFill(B1, [W(s[1])], { who: s[0], pop: true, d: 700 + i * 300 })).join("")}</div>` + dBoard({ "María": 1 }, "María") },
+  { cap: "d10", dur: 5600, html: () => dRound(2, "Jorge") + dWho(t("demoScreen", { n: "Jesús" })) + blackCard(BLACK[B2], false) + `<div class="hand demo-hand">${H2.map((id, i) => dCard(W(id), { sel: i === 0 || i === 2, badge: i === 0 ? 1 : (i === 2 ? 2 : 0), tap: i === 2 })).join("")}</div><div class="preview pop" style="--d:900ms"><span class="label">${esc(t("readAs"))}</span>${dFill(B2, [W(H2[0]), W(H2[2])])}</div>` },
+  { cap: "d11", dur: 4400, html: () => dRound(2, "Jorge") + `<div class="winner">${dFill(B2, [W(H2[0]), W(H2[2])], { stamp: true })}${dWin("Jesús")}</div>` + dBoard({ "María": 1, "Jesús": 1 }, "Jesús") },
+  { cap: "d12", dur: 6200, html: () => dRound(3, "María") + dWho(t("demoScreen", { n: "Vane" })) + blackCard(BLACK[B3], false) + `<div class="hand demo-hand"><div class="card blankcard is-sel">${esc(t("blankCard"))}<small>${esc(t("blankOwn"))}</small><span class="tap"></span></div>${H3.map(id => dCard(W(id))).join("")}</div><div class="blankbox"><span class="label">${esc(t("blankLabel"))}</span><div class="demo-input"><span id="demoType"></span><span class="caret"></span></div></div>`,
+    after: () => typeInto("#demoType", t("demoV3")) },
+  { cap: "d13", dur: 4800, html: () => dRound(3, "María") + `<div class="winner">${dFill(B3, [t("demoV3")], { stamp: true })}${dWin("Vane")}</div><div class="subs">${[S3[0], S3[2]].map((s, i) => dFill(B3, [dTxt(s[1])], { who: s[0], pop: true, d: 700 + i * 300 })).join("")}</div>` + dBoard({ "María": 1, "Jesús": 1, "Vane": 1 }, "Vane") },
+  { cap: "d14", dur: 4200, html: () => `<p class="demo-skip pop">${esc(t("demoSkip"))}</p>` + dBoard({ "María": 3, "Jesús": 2, "Vane": 1, "Jorge": 1 }, "María") },
+  { cap: "d15", dur: 0, html: () => `<div class="card black bigblack pop"><div class="champ-av">${avHTML(dp("María"), "xl")}</div><p class="eyebrow" style="color:inherit;opacity:.6">${esc(t("contractClosed"))}</p><p class="champ" style="margin-top:10px">${esc(t("gameWon", { n: "María" }))}</p><p style="margin-top:8px;font-weight:600;font-size:18px">${esc(tn("withPts", 3))}</p><span class="foot"><span>${esc(t("brand"))}</span><span>${esc(tn("rounds", 6))}</span></span></div>` + dBoard({ "María": 3, "Jesús": 2, "Vane": 1, "Jorge": 1 }) },
+];
+const D = { i: 0, playing: true, t: 0, typeT: 0, startedAt: 0, remaining: 0 };
+const reducedMotion = () => { try { return window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return false; } };
+function typeInto(sel, text){
+  const el = $(sel); if (!el) return;
+  if (reducedMotion()) { el.textContent = text; return; }
+  let k = 0; clearInterval(D.typeT);
+  setTimeout(() => { D.typeT = setInterval(() => { const e = $(sel); if (!e || k >= text.length) { clearInterval(D.typeT); return; } e.textContent = text.slice(0, ++k); }, 75); }, 700);
+}
+function demoShow(){
+  clearTimeout(D.t); clearInterval(D.typeT);
+  const step = DEMO[D.i]; const last = D.i === DEMO.length - 1;
+  $("#demoStage").innerHTML = step.html();
+  $("#demoCap").textContent = t(step.cap);
+  $("#demoCount").textContent = t("stepOf", { i: D.i + 1, n: DEMO.length });
+  $("#demoEnd").hidden = !last;
+  $("#demoProg").innerHTML = step.dur ? `<span style="--dur:${step.dur}ms"></span>` : '<span style="--dur:1ms"></span>';
+  if (step.after) step.after();
+  D.remaining = step.dur; D.startedAt = Date.now();
+  if (D.playing && step.dur) D.t = setTimeout(demoNext, step.dur);
+  demoControls();
+}
+function demoControls(){
+  const last = D.i === DEMO.length - 1;
+  $("#demo").classList.toggle("paused", !D.playing);
+  $("#demoPlay").textContent = last ? t("replay") : (D.playing ? t("pause") : t("cont"));
+  $("#demo [data-act=demo-prev]").disabled = D.i === 0;
+  $("#demo [data-act=demo-next]").disabled = last;
+}
+function demoNext(){ if (D.i < DEMO.length - 1) { D.i++; demoShow(); window.scrollTo(0, 0); } }
+function demoPrev(){ if (D.i > 0) { D.i--; demoShow(); window.scrollTo(0, 0); } }
+function demoToggle(){
+  if (D.i === DEMO.length - 1) { D.i = 0; D.playing = true; demoShow(); return; }
+  if (D.playing) { D.playing = false; clearTimeout(D.t); D.remaining = Math.max(400, D.remaining - (Date.now() - D.startedAt)); }
+  else { D.playing = true; D.startedAt = Date.now(); D.t = setTimeout(demoNext, D.remaining); }
+  demoControls();
+}
+function demoOpen(){
+  D.i = 0; D.playing = true;
+  $("#home").hidden = true; $("#demo").hidden = false;
+  demoShow(); window.scrollTo(0, 0); $("#demoTitle").focus({ preventScroll: true });
+}
+function demoClose(){
+  clearTimeout(D.t); clearInterval(D.typeT);
+  $("#demo").hidden = true;
+  if (!S.nroom) { $("#home").hidden = false; renderHome(); }
+  window.scrollTo(0, 0); $("#demoBtn").focus({ preventScroll: true });
+}
+
+/* ---------- Eventos ---------- */
+function bind(){
+  const nameIn = $("#nameIn");
+  nameIn.value = load("cxc:name") || "";
+  const avIn = $("#avIn");
+  avIn.value = load("cxc:avatar") || ""; S.avatar = cleanAvatar(avIn.value);
+  avIn.addEventListener("input", () => { S.avatar = cleanAvatar(avIn.value); store("cxc:avatar", S.avatar); renderHome(); });
+  nameIn.addEventListener("input", () => { store("cxc:name", nameIn.value.trim()); renderHome(); });
+  const codeIn = $("#codeIn");
+  codeIn.addEventListener("input", () => { codeIn.value = codeIn.value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 4); });
+  codeIn.addEventListener("keydown", e => { if (e.key === "Enter") $("#joinBtn").click(); });
+  $("#createBtn").addEventListener("click", () => {
+    const busy = new Set(S.openRooms.map(r => r.c)); let c = genCode(); while (busy.has(c)) c = genCode();
+    enterRoom(c, nameIn.value, "create");
+  });
+  $("#joinBtn").addEventListener("click", () => enterRoom(codeIn.value, nameIn.value, "join"));
+  $("#resumeBtn").addEventListener("click", () => { const l = load("cxc:last"); if (l) { nameIn.value = l.name; enterRoom(l.code, l.name, "join"); } });
+  $("#leaveBtn").addEventListener("click", () => leaveRoom(false));
+  $("#sendBtn").addEventListener("click", sendSub);
+  $("#remoBtn").addEventListener("click", remo);
+  $("#blankIn").addEventListener("input", e => { S.blankText = e.target.value.slice(0, 60); renderPreview(); });
+  document.addEventListener("click", e => {
+    const el = e.target.closest("[data-act]"); if (!el || el.disabled) return;
+    const a = el.dataset.act;
+    if (a === "chip") { nameIn.value = el.dataset.name; store("cxc:name", el.dataset.name); renderHome(); }
+    else if (a === "lang") setLang(el.dataset.l);
+    else if (a === "join-open") enterRoom(el.dataset.code, nameIn.value, "join");
+    else if (a === "copy") copyCode();
+    else if (a === "card") toggleCard(Number(el.dataset.id));
+    else if (a === "pick") { if (S.st && mySeat() === S.st.cz) { S.pickIdx = Number(el.dataset.i); render(); } }
+    else if (a === "confirm") confirmPick();
+    else if (a === "unsend") { setMyPres({ sub: null }); render(); }
+    else if (a === "host") hostDo(el.dataset.op);
+    else if (a === "cfg") hostDo("cfg", { k: el.dataset.k, v: Number(el.dataset.v) });
+    else if (a === "remove") hostDo("remove", Number(el.dataset.i));
+    else if (a === "av-pick") { avIn.value = el.dataset.av; S.avatar = cleanAvatar(el.dataset.av); store("cxc:avatar", S.avatar); renderHome(); }
+    else if (a === "av-clear") { avIn.value = ""; S.avatar = ""; store("cxc:avatar", ""); renderHome(); }
+    else if (a === "demo-open") demoOpen();
+    else if (a === "demo-close") demoClose();
+    else if (a === "demo-next") demoNext();
+    else if (a === "demo-prev") demoPrev();
+    else if (a === "demo-toggle") demoToggle();
+    else if (a === "demo-restart") { D.i = 0; D.playing = true; demoShow(); window.scrollTo(0, 0); }
+  });
+  document.addEventListener("keydown", e => {
+    if ($("#demo").hidden) return;
+    const tag = (e.target && e.target.tagName) || "";
+    if (tag === "INPUT" || tag === "TEXTAREA") return;
+    if (e.key === "Escape") demoClose();
+    else if (e.key === "ArrowRight") demoNext();
+    else if (e.key === "ArrowLeft") demoPrev();
+  });
+}
+
+/* ---------- Sala fuera de Claude: servidor propio por WebSocket ---------- */
+// Misma forma que la sala de Claude (peers, onPeers, presence, join, leave), sobre el servidor de server.js.
+function randomId(n){ const a = "abcdefghijklmnopqrstuvwxyz0123456789"; const buf = new Uint8Array(n); crypto.getRandomValues(buf); let s = ""; for (let i = 0; i < n; i++) s += a[buf[i] % a.length]; return s; }
+function serverUrl(){
+  // ?server=wss://host/ws fija el servidor (y se recuerda en este navegador)
+  const q = new URLSearchParams(location.search).get("server");
+  if (q && /^wss?:\/\//.test(q)) { store("cxc:server", q); return q; }
+  const meta = document.querySelector('meta[name="cxc-server"]');
+  const conf = String(window.CXC_SERVER || (meta && meta.content) || "").trim();
+  if (conf) return conf;
+  const saved = load("cxc:server");
+  if (typeof saved === "string" && /^wss?:\/\//.test(saved)) return saved;
+  // GitHub Pages solo sirve ficheros estáticos: sin servidor configurado no hay /ws
+  if (/\.github\.io$/.test(location.hostname)) return "";
+  if (!/^https?:$/.test(location.protocol) || !location.host) return "";
+  return (location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws";
+}
+function createWsRoom(url){
+  let uid = load("cxc:uid");
+  if (typeof uid !== "string" || !/^[A-Za-z0-9_-]{8,64}$/.test(uid)) { uid = randomId(24); store("cxc:uid", uid); }
+  const me = randomId(16);
+  const rooms = new Map(); const conn = new Set(); const waiting = new Map();
+  let ws = null, open = false, backoff = 600, seq = 0;
+  const raw = m => { if (ws && open) { try { ws.send(JSON.stringify(m)); } catch (e) {} } };
+  function rebuild(st){
+    const list = [];
+    for (const p of st.peers.values()) if (p.peer !== me) list.push(Object.freeze({ peer: p.peer, by: p.by || null, isMe: false, sameTab: false, kind: "viewer", guest: false, presence: Object.freeze(p.presence || {}), updatedAt: p.updatedAt }));
+    list.push(Object.freeze({ peer: me, by: uid, isMe: true, sameTab: true, kind: "viewer", guest: false, presence: Object.freeze(Object.assign({}, st.mine)), updatedAt: Date.now() }));
+    st.snap = Object.freeze(list);
+    const ch = { peers: st.snap, joined: [], left: [], updated: [] };
+    st.handlers.forEach(h => queueMicrotask(() => h(ch)));
+  }
+  function api(st){
+    return {
+      name: st.name,
+      peers: () => st.snap,
+      onPeers(h){ st.handlers.add(h); queueMicrotask(() => h({ peers: st.snap, joined: st.snap, left: [], updated: [] })); return () => st.handlers.delete(h); },
+      presence(patch){
+        const next = Object.assign({}, st.mine);
+        for (const k in patch) { if (patch[k] === null) delete next[k]; else next[k] = JSON.parse(JSON.stringify(patch[k])); }
+        if (bytes(next) > 4096) return Promise.reject({ code: "invalid_argument", message: "presence > 4 KiB" });
+        st.mine = next; raw({ t: "presence", room: st.name, patch }); rebuild(st);
+        return Promise.resolve();
+      },
+      emit: () => Promise.reject({ code: "not_permitted" }),
+      on: () => () => {},
+      connected: () => open,
+      onConnection(h){ conn.add(h); queueMicrotask(() => h(open)); return () => conn.delete(h); },
+      leave(){ if (!st.left) { st.left = true; st.handlers.clear(); rooms.delete(st.name); raw({ t: "leave", room: st.name }); } return Promise.resolve(); },
+    };
+  }
+  function state(name){ const st = { name, peers: new Map(), snap: Object.freeze([]), handlers: new Set(), mine: {}, left: false, joinId: 0 }; st.api = api(st); rooms.set(name, st); rebuild(st); return st; }
+  function retry(){ setTimeout(connect, backoff); backoff = Math.min(8000, backoff * 2); }
+  function connect(){
+    try { ws = new WebSocket(url); } catch (e) { retry(); return; }
+    ws.onopen = () => {
+      open = true; backoff = 600;
+      raw({ t: "hello", peer: me, by: uid });
+      for (const st of rooms.values()) raw({ t: "join", room: st.name, presence: st.mine, id: st.joinId });
+      conn.forEach(h => h(true));
+    };
+    ws.onmessage = ev => {
+      let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
+      if (!m || typeof m !== "object") return;
+      const st = typeof m.room === "string" ? rooms.get(m.room) : null;
+      if (m.t === "joined" && st) {
+        st.peers = new Map((m.peers || []).map(p => [p.peer, { peer: p.peer, by: p.by, presence: p.presence || {}, updatedAt: Date.now() }]));
+        rebuild(st);
+        const w = waiting.get(m.id); if (w) { waiting.delete(m.id); w.resolve(st.api); }
+      } else if (m.t === "peer" && st && m.peer && m.peer.peer !== me) {
+        st.peers.set(m.peer.peer, { peer: m.peer.peer, by: m.peer.by, presence: m.peer.presence || {}, updatedAt: Date.now() });
+        rebuild(st);
+      } else if (m.t === "left" && st) {
+        if (st.peers.delete(m.peer)) rebuild(st);
+      } else if (m.t === "error") {
+        const w = waiting.get(m.id); if (w) { waiting.delete(m.id); w.reject({ code: m.code || "upstream_error", message: m.message || "" }); }
+      }
+    };
+    ws.onclose = () => { const was = open; open = false; if (was) conn.forEach(h => h(false)); retry(); };
+    ws.onerror = () => {};
+  }
+  const lobby = state("__lobby");
+  connect();
+  return Object.assign({}, lobby.api, {
+    join(name){
+      if (!/^[a-z0-9][a-z0-9_.-]{0,47}$/.test(name)) return Promise.reject({ code: "invalid_argument" });
+      const have = rooms.get(name); if (have) return Promise.resolve(have.api);
+      const st = state(name); const id = ++seq; st.joinId = id;
+      return new Promise((resolve, reject) => {
+        waiting.set(id, { resolve, reject });
+        raw({ t: "join", room: name, presence: st.mine, id });
+        setTimeout(() => { if (waiting.has(id)) { waiting.delete(id); rooms.delete(name); reject({ code: "upstream_error" }); } }, 10000);
+      });
+    },
+  });
+}
+async function getRoom(){
+  if (window.claude && typeof window.claude.use === "function") {
+    try { return { room: await window.claude.use("room"), inClaude: true }; } catch (e) { return { room: null, inClaude: true }; }
+  }
+  const url = serverUrl();
+  if (!url || typeof WebSocket === "undefined") return { room: null, inClaude: false };
+  return { room: createWsRoom(url), inClaude: false };
+}
+
+/* ---------- Arranque ---------- */
+async function start(data){
+  LANG = pickLang();
+  bind(); applyStatic(); renderHome();
+  const got = await getRoom(); const room = got.room;
+  S.room = room;
+  if (!room) { const nr = $("#noRoom"); nr.dataset.i18n = got.inClaude ? "noRoom" : "noServer"; nr.textContent = t(nr.dataset.i18n); nr.hidden = false; $("#homeForms").hidden = true; return; }
+  room.onPeers(onLobbyPeers, () => {});
+  setInterval(tick, 1000);
+  renderHome();
+  if (data && data.code && data.name) enterRoom(data.code, data.name, "join");
+}
+if (window.claude && window.claude.hot && typeof window.claude.hot.snapshot === "function") window.claude.hot.snapshot(() => (S.nroom ? { code: S.code, name: S.name } : {}));
+if (window.claude && window.claude.hot && typeof window.claude.hot.ready === "function") window.claude.hot.ready(start);
+else start((window.claude && window.claude.hot && window.claude.hot.data) || {});
+</script>
+</body>
+</html>
