@@ -1,0 +1,16 @@
+{
+  "name": "cartas-contra-el-cliente",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Juego de cartas del equipo de AI & Data Ops: salas por código, hasta 20 personas, en español, gallego y portugués.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "ws": "^8.22.0"
+  }
+}
