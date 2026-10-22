@@ -60,6 +60,12 @@ GitHub Pages solo sirve ficheros estáticos, así que **no puede alojar el servi
 
 Sin servidor configurado, la página de Pages carga pero avisa de que no puede conectar con el servidor del juego.
 
+## Vercel
+
+El sitio se despliega en Vercel, que sirve `public/` como página estática. Igual que en GitHub Pages, Vercel no ejecuta `server.js` (no admite WebSocket de larga duración), así que el servidor de salas tiene que estar en otro sitio y la página tiene que conocer su dirección (`?server=` o `<meta name="cxc-server">`, ver arriba).
+
+La página carga **Vercel Web Analytics** (`/_vercel/insights/script.js`) y **Speed Insights** (`/_vercel/speed-insights/script.js`). Para que recojan datos hay que activarlos en el proyecto de Vercel, en las pestañas *Analytics* y *Speed Insights*, y volver a desplegar. Fuera de Vercel (en local, Docker o GitHub Pages) esas rutas no existen y simplemente no se registra nada.
+
 ## Qué pasa si algo se cae
 
 - Si se cae el móvil del anfitrión (o cierra la página), otra persona de la sala toma el relevo en unos 8 segundos y la partida sigue.
