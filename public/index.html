@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<!-- Dirección del servidor de salas. Vacío = el mismo servidor que sirve esta página (ws(s)://host/ws). -->
+<!-- Dirección del servidor de salas (wss://host/ws, o /ws para el mismo servidor que sirve la página).
+     Vacío = sin servidor: los navegadores de la sala se conectan entre sí por WebRTC. server.js la rellena con /ws. -->
 <meta name="cxc-server" content="">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='7' y='3' width='19' height='25' rx='4' fill='%230D0E10' transform='rotate(-6 16 16)'/%3E%3C/svg%3E">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}</style>
@@ -688,7 +689,7 @@ const TX = {
   leadHint: ["Hasta 20 personas en la misma sala, cada una desde su móvil o su portátil.", "Ata 20 persoas na mesma sala, cada unha dende o seu móbil ou o seu portátil.", "Até 20 pessoas na mesma sala, cada uma no seu telemóvel ou portátil."],
   demoBtn: ["Ver una partida de ejemplo", "Ver unha partida de exemplo", "Ver um jogo de exemplo"],
   noRoom: ["Para jugar, abre esta página dentro de Claude con tu cuenta iniciada. La sala conecta a las personas que tienen acceso a esta página; si te han pasado el enlace, pide que te inviten por correo.", "Para xogar, abre esta páxina dentro de Claude coa túa conta iniciada. A sala conecta as persoas que teñen acceso a esta páxina; se che pasaron a ligazón, pide que te conviden por correo.", "Para jogar, abre esta página no Claude com a tua conta iniciada. A sala liga as pessoas que têm acesso a esta página; se te passaram o link, pede que te convidem por email."],
-  noServer: ["No se puede conectar con el servidor del juego. Abre la página desde la dirección donde está desplegado el servidor.", "Non se pode conectar co servidor do xogo. Abre a páxina dende o enderezo onde está despregado o servidor.", "Não é possível ligar ao servidor do jogo. Abre a página a partir do endereço onde o servidor está instalado."],
+  noServer: ["No se puede abrir la sala en este navegador. Recarga la página o prueba con otro navegador.", "Non se pode abrir a sala neste navegador. Recarga a páxina ou proba con outro navegador.", "Não é possível abrir a sala neste navegador. Recarrega a página ou experimenta outro navegador."],
   nameLabel: ["Tu nombre en la partida", "O teu nome na partida", "O teu nome no jogo"],
   namePh: ["Por ejemplo, Vane", "Por exemplo, Vane", "Por exemplo, Vane"],
   teamNames: ["Nombres del equipo", "Nomes do equipo", "Nomes da equipa"],
@@ -1161,7 +1162,7 @@ function electionTick(){
 function tick(){
   if (!S.nroom) return;
   if (S.isHost) hostSync(); else electionTick();
-  if (!S.st && S.mode === "join" && Date.now() - S.joinAt > 7000) S.notFound = true;
+  if (!S.st && S.mode === "join" && Date.now() - S.joinAt > 12000) S.notFound = true;
   render();
 }
 
@@ -1599,35 +1600,44 @@ function bind(){
 /* ---------- Sala fuera de Claude: servidor propio por WebSocket ---------- */
 // Misma forma que la sala de Claude (peers, onPeers, presence, join, leave), sobre el servidor de server.js.
 function randomId(n){ const a = "abcdefghijklmnopqrstuvwxyz0123456789"; const buf = new Uint8Array(n); crypto.getRandomValues(buf); let s = ""; for (let i = 0; i < n; i++) s += a[buf[i] % a.length]; return s; }
+// Vacío = no hay servidor de salas y se usa la sala entre navegadores (createP2pRoom)
 function serverUrl(){
-  // ?server=wss://host/ws fija el servidor (y se recuerda en este navegador)
+  // ?server=wss://host/ws fija el servidor (y se recuerda en este navegador); ?server=off lo olvida
   const q = new URLSearchParams(location.search).get("server");
+  if (q === "off") unstore("cxc:server");
   if (q && /^wss?:\/\//.test(q)) { store("cxc:server", q); return q; }
   const meta = document.querySelector('meta[name="cxc-server"]');
   const conf = String(window.CXC_SERVER || (meta && meta.content) || "").trim();
+  if (conf.startsWith("/")) {
+    if (!/^https?:$/.test(location.protocol) || !location.host) return "";
+    return (location.protocol === "https:" ? "wss://" : "ws://") + location.host + conf;
+  }
   if (conf) return conf;
-  const saved = load("cxc:server");
+  const saved = q === "off" ? null : load("cxc:server");
   if (typeof saved === "string" && /^wss?:\/\//.test(saved)) return saved;
-  // GitHub Pages y Vercel solo sirven ficheros estáticos: sin servidor configurado no hay /ws
-  if (/\.(github\.io|vercel\.app)$/.test(location.hostname)) return "";
-  if (!/^https?:$/.test(location.protocol) || !location.host) return "";
-  return (location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws";
+  return "";
 }
-function createWsRoom(url){
+function myUid(){
   let uid = load("cxc:uid");
   if (typeof uid !== "string" || !/^[A-Za-z0-9_-]{8,64}$/.test(uid)) { uid = randomId(24); store("cxc:uid", uid); }
+  return uid;
+}
+// Rehace la lista de peers de una sala (los demás + yo) y avisa a quien escucha
+function rebuildPeers(st, me, uid){
+  const list = [];
+  for (const p of st.peers.values()) if (p.peer !== me) list.push(Object.freeze({ peer: p.peer, by: p.by || null, isMe: false, sameTab: false, kind: "viewer", guest: false, presence: Object.freeze(p.presence || {}), updatedAt: p.updatedAt }));
+  list.push(Object.freeze({ peer: me, by: uid, isMe: true, sameTab: true, kind: "viewer", guest: false, presence: Object.freeze(Object.assign({}, st.mine)), updatedAt: Date.now() }));
+  st.snap = Object.freeze(list);
+  const ch = { peers: st.snap, joined: [], left: [], updated: [] };
+  st.handlers.forEach(h => queueMicrotask(() => h(ch)));
+}
+function createWsRoom(url){
+  const uid = myUid();
   const me = randomId(16);
   const rooms = new Map(); const conn = new Set(); const waiting = new Map();
   let ws = null, open = false, backoff = 600, seq = 0;
   const raw = m => { if (ws && open) { try { ws.send(JSON.stringify(m)); } catch (e) {} } };
-  function rebuild(st){
-    const list = [];
-    for (const p of st.peers.values()) if (p.peer !== me) list.push(Object.freeze({ peer: p.peer, by: p.by || null, isMe: false, sameTab: false, kind: "viewer", guest: false, presence: Object.freeze(p.presence || {}), updatedAt: p.updatedAt }));
-    list.push(Object.freeze({ peer: me, by: uid, isMe: true, sameTab: true, kind: "viewer", guest: false, presence: Object.freeze(Object.assign({}, st.mine)), updatedAt: Date.now() }));
-    st.snap = Object.freeze(list);
-    const ch = { peers: st.snap, joined: [], left: [], updated: [] };
-    st.handlers.forEach(h => queueMicrotask(() => h(ch)));
-  }
+  const rebuild = st => rebuildPeers(st, me, uid);
   function api(st){
     return {
       name: st.name,
@@ -1692,13 +1702,80 @@ function createWsRoom(url){
     },
   });
 }
+
+/* ---------- Sala sin servidor: los navegadores se conectan entre sí (WebRTC) ---------- */
+// Misma forma que createWsRoom, sobre Trystero (public/vendor/trystero.mjs): cada sala es una malla WebRTC
+// y los navegadores se encuentran a través de relés Nostr públicos. Cada uno manda su presencia completa
+// al que llega, cuando cambia y cada P2P_RESEND_MS por si se perdió algún mensaje.
+const P2P_APP = "cartas-contra-el-cliente";
+const P2P_RESEND_MS = 15000;
+function createP2pRoom(lib){
+  const uid = myUid();
+  const me = lib.selfId;
+  const cfg = { appId: P2P_APP };
+  if (Array.isArray(window.CXC_RELAYS) && window.CXC_RELAYS.length) cfg.relayConfig = { urls: window.CXC_RELAYS.slice() };
+  const rooms = new Map();
+  const rebuild = st => rebuildPeers(st, me, uid);
+  function api(st){
+    return {
+      name: st.name,
+      peers: () => st.snap,
+      onPeers(h){ st.handlers.add(h); queueMicrotask(() => h({ peers: st.snap, joined: st.snap, left: [], updated: [] })); return () => st.handlers.delete(h); },
+      presence(patch){
+        const next = Object.assign({}, st.mine);
+        for (const k in patch) { if (patch[k] === null) delete next[k]; else next[k] = JSON.parse(JSON.stringify(patch[k])); }
+        if (bytes(next) > 4096) return Promise.reject({ code: "invalid_argument", message: "presence > 4 KiB" });
+        st.mine = next; st.send(); rebuild(st);
+        return Promise.resolve();
+      },
+      emit: () => Promise.reject({ code: "not_permitted" }),
+      on: () => () => {},
+      connected: () => true,
+      onConnection(h){ queueMicrotask(() => h(true)); return () => {}; },
+      leave(){
+        if (!st.left) { st.left = true; st.handlers.clear(); rooms.delete(st.name); clearInterval(st.timer); st.room.leave().catch(() => {}); }
+        return Promise.resolve();
+      },
+    };
+  }
+  function state(name){
+    const st = { name, peers: new Map(), snap: Object.freeze([]), handlers: new Set(), mine: {}, left: false };
+    st.room = lib.joinRoom(cfg, name);
+    const pres = st.room.makeAction("pres", { onMessage(data, ctx){
+      if (st.left || !data || typeof data !== "object" || typeof ctx.peerId !== "string") return;
+      const p = data.p && typeof data.p === "object" && !Array.isArray(data.p) ? data.p : {};
+      if (bytes(p) > 4096) return;
+      const by = typeof data.by === "string" && /^[A-Za-z0-9_-]{8,64}$/.test(data.by) ? data.by : null;
+      st.peers.set(ctx.peerId, { peer: ctx.peerId, by, presence: p, updatedAt: Date.now() });
+      rebuild(st);
+    } });
+    st.send = target => { if (!st.left) pres.send({ by: uid, p: st.mine }, target ? { target } : undefined).catch(() => {}); };
+    st.room.onPeerJoin = id => st.send(id);
+    st.room.onPeerLeave = id => { if (st.peers.delete(id)) rebuild(st); };
+    st.timer = setInterval(() => st.send(), P2P_RESEND_MS);
+    st.api = api(st); rooms.set(name, st); rebuild(st);
+    return st;
+  }
+  // Al volver a la pestaña (móvil dormido), reenvía la presencia a todas las salas
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") for (const st of rooms.values()) st.send(); });
+  const lobby = state("__lobby");
+  return Object.assign({}, lobby.api, {
+    join(name){
+      if (!/^[a-z0-9][a-z0-9_.-]{0,47}$/.test(name)) return Promise.reject({ code: "invalid_argument" });
+      const have = rooms.get(name);
+      return Promise.resolve(have ? have.api : state(name).api);
+    },
+  });
+}
 async function getRoom(){
   if (window.claude && typeof window.claude.use === "function") {
     try { return { room: await window.claude.use("room"), inClaude: true }; } catch (e) { return { room: null, inClaude: true }; }
   }
   const url = serverUrl();
-  if (!url || typeof WebSocket === "undefined") return { room: null, inClaude: false };
-  return { room: createWsRoom(url), inClaude: false };
+  if (url && typeof WebSocket !== "undefined") return { room: createWsRoom(url), inClaude: false };
+  if (typeof RTCPeerConnection === "undefined") return { room: null, inClaude: false };
+  try { return { room: createP2pRoom(await import("./vendor/trystero.mjs")), inClaude: false }; }
+  catch (e) { console.warn("p2p", e); return { room: null, inClaude: false }; }
 }
 
 /* ---------- Arranque ---------- */
