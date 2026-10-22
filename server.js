@@ -1,6 +1,7 @@
 "use strict";
 // Servidor de Cartas contra el Cliente.
-// Sirve public/index.html y hace de "sala" en tiempo real por WebSocket (/ws):
+// Sirve public/index.html y hace de "sala" en tiempo real por WebSocket (/ws).
+// Sin este servidor (Vercel, GitHub Pages) la página conecta los navegadores entre sí por WebRTC; servida desde aquí usa /ws:
 // cada conexión entra en salas por nombre y comparte un objeto de presencia (máx. 4 KiB)
 // que el servidor reenvía al resto de la sala. Toda la lógica del juego vive en el navegador.
 const http = require("http");
@@ -15,7 +16,9 @@ const MAX_PEERS_PER_ROOM = 256;
 const MAX_ROOMS_PER_PEER = 16;
 const ROOM_RE = /^(__lobby|[a-z0-9][a-z0-9_.-]{0,47})$/;
 const INDEX_PATH = path.join(__dirname, "public", "index.html");
-const INDEX = fs.readFileSync(INDEX_PATH);
+// La página servida desde aquí usa este servidor como sala en vez de WebRTC
+const INDEX = Buffer.from(fs.readFileSync(INDEX_PATH, "utf8").replace('<meta name="cxc-server" content="">', '<meta name="cxc-server" content="/ws">'));
+const VENDOR = { "/vendor/trystero.mjs": fs.readFileSync(path.join(__dirname, "public", "vendor", "trystero.mjs")) };
 
 const server = http.createServer((req, res) => {
   const url = (req.url || "/").split("?")[0];
@@ -27,6 +30,11 @@ const server = http.createServer((req, res) => {
   if (req.method === "GET" && (url === "/" || url === "/index.html")) {
     res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-cache", "x-content-type-options": "nosniff" });
     res.end(INDEX);
+    return;
+  }
+  if (req.method === "GET" && VENDOR[url]) {
+    res.writeHead(200, { "content-type": "text/javascript; charset=utf-8", "cache-control": "public, max-age=86400", "x-content-type-options": "nosniff" });
+    res.end(VENDOR[url]);
     return;
   }
   res.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
