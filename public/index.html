@@ -275,6 +275,13 @@ aside.board{background:var(--surface);border:1px solid var(--line);border-radius
   .demo-prog span{animation:none;transform:scaleX(1)}
 }
 </style>
+<!-- Vercel Web Analytics y Speed Insights (solo funcionan cuando la página la sirve Vercel) -->
+<script>
+  window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+  window.si = window.si || function () { (window.siq = window.siq || []).push(arguments); };
+</script>
+<script defer src="/_vercel/insights/script.js"></script>
+<script defer src="/_vercel/speed-insights/script.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -1601,8 +1608,8 @@ function serverUrl(){
   if (conf) return conf;
   const saved = load("cxc:server");
   if (typeof saved === "string" && /^wss?:\/\//.test(saved)) return saved;
-  // GitHub Pages solo sirve ficheros estáticos: sin servidor configurado no hay /ws
-  if (/\.github\.io$/.test(location.hostname)) return "";
+  // GitHub Pages y Vercel solo sirven ficheros estáticos: sin servidor configurado no hay /ws
+  if (/\.(github\.io|vercel\.app)$/.test(location.hostname)) return "";
   if (!/^https?:$/.test(location.protocol) || !location.host) return "";
   return (location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws";
 }
