@@ -267,9 +267,16 @@ aside.board{background:var(--surface);border:1px solid var(--line);border-radius
   aside.board{position:sticky;top:calc(env(safe-area-inset-top,0px) + 76px)}
   .table.solo{grid-template-columns:minmax(0,1fr)}
 }
+/* Modo prueba */
+.practice{display:grid;gap:14px}
+.pr-ask{font:700 19px/1.3 var(--f-display);margin:0}
+.pr-last{display:grid;gap:6px;padding-top:14px;border-top:1px solid var(--line)}
+.pr-last .card{min-height:0;font-size:17px;padding-bottom:16px}
+.pr-foot{display:flex;justify-content:flex-end}
 /* Pantallas grandes: la partida de ejemplo centrada y todo proporcionalmente más grande */
 @media (min-width:1024px){
   .demo{max-width:760px;margin-inline:auto}
+  .practice{max-width:860px;margin-inline:auto}
   .demo-stage{max-width:none}
 }
 @media (min-width:1500px) and (min-height:820px){ html{zoom:1.15} }
@@ -307,7 +314,7 @@ aside.board{background:var(--surface);border:1px solid var(--line);border-radius
       <div>
         <p class="lead" data-i18n="lead">El juego de cartas del equipo. En cada ronda alguien hace de cliente y el resto le vende la mejor respuesta.</p>
         <p class="hint" data-i18n="leadHint">Hasta 20 personas en la misma sala, cada una desde su móvil o su portátil.</p>
-        <div class="hero-actions"><button type="button" id="demoBtn" class="btn ghost" data-act="demo-open" data-i18n="demoBtn">Ver una partida de ejemplo</button></div>
+        <div class="hero-actions"><button type="button" id="demoBtn" class="btn ghost" data-act="demo-open" data-i18n="demoBtn">Ver una partida de ejemplo</button><button type="button" id="prBtn" class="btn ghost" data-act="pr-open" data-i18n="prBtn">Probar las cartas</button></div>
       </div>
     </div>
 
@@ -435,6 +442,27 @@ aside.board{background:var(--surface);border:1px solid var(--line);border-radius
       <button type="button" class="btn ghost sm" data-act="demo-next" data-i18n="next">Siguiente</button>
       <div class="langs" role="group" aria-label="Idioma" data-langs></div>
     </div>
+  </section>
+
+  <section id="practice" class="practice" hidden aria-labelledby="prTitle">
+    <header class="topbar">
+      <div class="tb-left">
+        <span class="tb-brand" id="prTitle" tabindex="-1" data-i18n="prTitle">Modo prueba</span>
+        <span id="prCount" class="tb-phase"></span>
+      </div>
+      <div class="tb-right"><button type="button" class="btn ghost sm" data-act="pr-close" data-i18n="close">Cerrar</button></div>
+    </header>
+    <p class="hint" data-i18n="prHint">Juega solo para conocer las cartas. Con cada respuesta salen una carta negra y una mano nuevas.</p>
+    <div id="prBlack"></div>
+    <p class="pr-ask" id="prAsk"></p>
+    <div class="hand" id="prHand"></div>
+    <div class="preview" id="prPreview"></div>
+    <div class="send-row">
+      <button type="button" id="prSend" class="btn big" data-act="pr-send" disabled data-i18n="prSend">Responder</button>
+      <button type="button" class="btn ghost" data-act="pr-skip" data-i18n="prSkip">Otra carta negra</button>
+    </div>
+    <div class="pr-last" id="prLast" hidden></div>
+    <div class="pr-foot"><div class="langs" role="group" aria-label="Idioma" data-langs></div></div>
   </section>
 </div>
 <div id="toast" role="status" aria-live="polite"></div>
@@ -728,6 +756,13 @@ const TX = {
   board: ["Marcador", "Marcador", "Marcador"],
   demoTitle: ["Partida de ejemplo", "Partida de exemplo", "Jogo de exemplo"],
   close: ["Cerrar", "Pechar", "Fechar"],
+  prBtn: ["Probar las cartas", "Probar as cartas", "Experimentar as cartas"],
+  prTitle: ["Modo prueba", "Modo proba", "Modo de teste"],
+  prHint: ["Juega solo para conocer las cartas. Con cada respuesta salen una carta negra y una mano nuevas.", "Xoga só para coñecer as cartas. Con cada resposta saen unha carta negra e unha man novas.", "Joga sozinho para conhecer as cartas. A cada resposta saem uma carta preta e uma mão novas."],
+  prSend: ["Responder", "Responder", "Responder"],
+  prSkip: ["Otra carta negra", "Outra carta negra", "Outra carta preta"],
+  prLast: ["Tu última respuesta", "A túa última resposta", "A tua última resposta"],
+  prCount: ["Respuestas: {n}", "Respostas: {n}", "Respostas: {n}"],
   again: ["Ver otra vez", "Ver outra vez", "Ver outra vez"],
   goPlay: ["Ir a jugar", "Ir xogar", "Ir jogar"],
   prev: ["Anterior", "Anterior", "Anterior"],
@@ -1273,6 +1308,7 @@ function setLang(l){
   LANG = l; store("cxc:lang", l);
   applyStatic(); renderHome(); render();
   if (!$("#demo").hidden) demoShow();
+  if (!$("#practice").hidden) prRender();
 }
 function homeError(msg){ const e = $("#homeErr"); e.textContent = msg; e.hidden = !msg; }
 function renderHome(){
@@ -1307,7 +1343,7 @@ function phaseLabel(st){
 }
 function render(){
   const inGame = !!S.nroom;
-  if ($("#demo").hidden) { $("#home").hidden = inGame; }
+  if ($("#demo").hidden && $("#practice").hidden) { $("#home").hidden = inGame; }
   $("#game").hidden = !inGame;
   if (!inGame) { renderHome(); return; }
   const st = S.st;
@@ -1551,6 +1587,56 @@ function demoClose(){
   window.scrollTo(0, 0); $("#demoBtn").focus({ preventScroll: true });
 }
 
+/* ---------- Modo prueba: una persona sola, sin sala ---------- */
+// Cada respuesta (o "otra carta negra") saca una carta negra y una mano nuevas. Los mazos se barajan
+// y se van gastando para no repetir hasta haberlos visto todos.
+const PR_HAND = 8;
+const PR = { bk: -1, hand: [], sel: [], n: 0, last: null, bDeck: [], wDeck: [] };
+const prWhiteIds = () => [...NAMES.keys(), ...Array.from({ length: WHITE_T.length }, (_, i) => NW + i)];
+function prDraw(){
+  if (!PR.bDeck.length) PR.bDeck = shuffle(BLACK.map((b, i) => i).filter(i => i !== PR.bk));
+  PR.bk = PR.bDeck.pop();
+  if (PR.wDeck.length < PR_HAND) PR.wDeck = shuffle(prWhiteIds().filter(id => !PR.wDeck.includes(id) && !PR.hand.includes(id))).concat(PR.wDeck);
+  PR.hand = PR.wDeck.splice(-PR_HAND);
+  PR.sel = [];
+}
+function prRender(){
+  const blk = BLACK[PR.bk];
+  setHTML($("#prBlack"), blackCard(blk, true));
+  $("#prAsk").textContent = blk.p === 1 ? t("pick1") : t("pick2");
+  $("#prCount").textContent = t("prCount", { n: PR.n });
+  setHTML($("#prHand"), PR.hand.map(id => { const k = PR.sel.indexOf(id); return `<button type="button" class="card white" data-act="pr-card" data-id="${id}" aria-pressed="${k >= 0}">${esc(W(id))}${k >= 0 && blk.p > 1 ? `<span class="badge">${k + 1}</span>` : ""}<span class="foot"><span>CcC</span></span></button>`; }).join(""));
+  setHTML($("#prPreview"), PR.sel.length ? `<span class="label">${esc(t("readAs"))}</span><div class="card white">${fillHTML(blk, PR.sel.map(W))}</div>` : "");
+  $("#prSend").disabled = PR.sel.length !== blk.p;
+  const last = PR.last;
+  $("#prLast").hidden = !last;
+  if (last) setHTML($("#prLast"), `<span class="label">${esc(t("prLast"))}</span><div class="card white">${fillHTML(BLACK[last.bk], last.ids.map(W))}</div>`);
+}
+function prToggle(id){
+  const pick = BLACK[PR.bk].p; const k = PR.sel.indexOf(id);
+  if (k >= 0) PR.sel.splice(k, 1);
+  else if (pick === 1) PR.sel = [id];
+  else if (PR.sel.length < pick) PR.sel.push(id);
+  else { toast(t("pickLimit", { n: pick })); return; }
+  prRender();
+}
+function prSend(){
+  if (PR.sel.length !== BLACK[PR.bk].p) return;
+  PR.last = { bk: PR.bk, ids: PR.sel.slice() }; PR.n++;
+  prDraw(); prRender(); window.scrollTo(0, 0);
+}
+function prSkip(){ prDraw(); prRender(); window.scrollTo(0, 0); }
+function prOpen(){
+  PR.n = 0; PR.last = null; prDraw();
+  $("#home").hidden = true; $("#practice").hidden = false;
+  prRender(); window.scrollTo(0, 0); $("#prTitle").focus({ preventScroll: true });
+}
+function prClose(){
+  $("#practice").hidden = true;
+  if (!S.nroom) { $("#home").hidden = false; renderHome(); }
+  window.scrollTo(0, 0); $("#prBtn").focus({ preventScroll: true });
+}
+
 /* ---------- Eventos ---------- */
 function bind(){
   const nameIn = $("#nameIn");
@@ -1588,6 +1674,11 @@ function bind(){
     else if (a === "remove") hostDo("remove", Number(el.dataset.i));
     else if (a === "av-pick") { avIn.value = el.dataset.av; S.avatar = cleanAvatar(el.dataset.av); store("cxc:avatar", S.avatar); renderHome(); }
     else if (a === "av-clear") { avIn.value = ""; S.avatar = ""; store("cxc:avatar", ""); renderHome(); }
+    else if (a === "pr-open") prOpen();
+    else if (a === "pr-close") prClose();
+    else if (a === "pr-card") prToggle(Number(el.dataset.id));
+    else if (a === "pr-send") prSend();
+    else if (a === "pr-skip") prSkip();
     else if (a === "demo-open") demoOpen();
     else if (a === "demo-close") demoClose();
     else if (a === "demo-next") demoNext();
