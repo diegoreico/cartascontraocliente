@@ -74,6 +74,31 @@ El sitio se despliega en Vercel, que sirve `public/` como página estática. Ver
 
 La página carga **Vercel Web Analytics** (`/_vercel/insights/script.js`) y **Speed Insights** (`/_vercel/speed-insights/script.js`). Para que recojan datos hay que activarlos en el proyecto de Vercel, en las pestañas *Analytics* y *Speed Insights*, y volver a desplegar. Fuera de Vercel (en local, Docker o GitHub Pages) esas rutas no existen y simplemente no se registra nada.
 
+## Sugerencias y reportes de cartas
+
+En la portada hay un apartado "¿Se te ocurre una carta?" para **sugerir cartas** nuevas (negras o blancas) y **reportar cartas** que no tienen sentido, no gustan o están mal traducidas. También se puede reportar desde el modo prueba y desde la partida ("Reportar una de estas cartas"), con las cartas que hay en pantalla.
+
+Cada envío se convierte en un **issue de GitHub** en este repositorio, con etiquetas:
+
+- `sugerencia` o `reporte`
+- `carta-negra` o `carta-blanca`
+
+Los reportes indican la carta exacta (por ejemplo `WHITE_T[42]`), el idioma en que se vio y el motivo. Para aprobar una sugerencia, ponle la etiqueta `aprobada`; después hay que añadirla a `public/index.html` con sus tres idiomas.
+
+Quien envía no necesita cuenta de GitHub. Lo recibe `api/feedback.js`: en Vercel es una función (`/api/feedback`) y `server.js` la sirve en la misma ruta. Tiene un campo trampa contra bots, un límite de 10 envíos por persona cada 10 minutos y quita las menciones (`@usuario`) para que nadie reciba avisos.
+
+### Activarlo
+
+1. Crea un token en GitHub: *Settings → Developer settings → Personal access tokens → Fine-grained tokens*. En *Repository access* elige solo este repositorio y en *Permissions* da **Issues: Read and write**.
+2. En Vercel, en el proyecto: *Settings → Environment Variables*, añade `GITHUB_TOKEN` con ese token (entorno *Production*) y vuelve a desplegar.
+3. Conviene crear las etiquetas `sugerencia`, `reporte`, `carta-negra`, `carta-blanca` y `aprobada` en el repo para que tengan color.
+
+Variables opcionales: `FEEDBACK_REPO` (`dueño/repo` donde crear los issues, por defecto este). Con Docker o Kubernetes, pasa `GITHUB_TOKEN` como variable de entorno del contenedor.
+
+Sin `GITHUB_TOKEN` (o en GitHub Pages, que no ejecuta funciones) el formulario se ve igual, pero avisa de que el buzón no está activado.
+
+Ojo: si el repositorio es público, las sugerencias y reportes también lo son.
+
 ## Qué pasa si algo se cae
 
 - Si se cae el móvil del anfitrión (o cierra la página), otra persona de la sala toma el relevo (unos 8 segundos con servidor, unos 20 sin él) y la partida sigue.

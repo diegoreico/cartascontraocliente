@@ -273,6 +273,25 @@ aside.board{background:var(--surface);border:1px solid var(--line);border-radius
 .pr-last{display:grid;gap:6px;padding-top:14px;border-top:1px solid var(--line)}
 .pr-last .card{min-height:0;font-size:17px;padding-bottom:16px}
 .pr-foot{display:flex;justify-content:flex-end}
+/* Sugerencias y reportes */
+.fb-cta{margin-top:18px}
+.fb-dlg{border:0;padding:0;background:var(--bg);color:var(--fg);width:min(640px,calc(100% - 32px));max-height:calc(100% - 32px);border-radius:16px;box-shadow:var(--shadow)}
+.fb-dlg::backdrop{background:rgba(8,10,14,.5)}
+.fb-in{display:grid;gap:14px;padding:16px}
+.fb-in0{display:grid;gap:10px}
+.fb-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.fb-results{display:grid;gap:8px}
+.fb-opt{appearance:none;display:block;width:100%;text-align:left;border:1px solid var(--card-edge);border-radius:12px;padding:10px 12px;font:700 15px/1.3 var(--f-body);overflow-wrap:anywhere}
+button.fb-opt{cursor:pointer}
+button.fb-opt:hover{outline:2px solid var(--accent);outline-offset:2px}
+.fb-opt.b{background:var(--card-b);color:var(--card-b-ink)}
+.fb-opt.w{background:var(--card-w);color:var(--card-w-ink)}
+.fb-picked{display:grid;gap:6px;justify-items:start}
+.hp{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
+.game-foot{align-items:center;gap:16px;flex-wrap:wrap}
+@media (max-width:640px){
+  .fb-dlg{width:100%;max-width:100%;height:100%;max-height:100%;margin:0;border-radius:0}
+}
 /* Pantallas grandes: la partida de ejemplo centrada y todo proporcionalmente más grande */
 @media (min-width:1024px){
   .demo{max-width:760px;margin-inline:auto}
@@ -372,6 +391,15 @@ aside.board{background:var(--surface);border:1px solid var(--line);border-radius
       <p data-i18n-html="ruleBlank"></p>
       <p data-i18n-html="ruleRemo"></p>
     </details>
+
+    <div class="panel fb-cta">
+      <h2 data-i18n="fbCtaTitle">¿Se te ocurre una carta?</h2>
+      <p class="hint" data-i18n="fbCtaHint">Propón cartas nuevas o avisa de las que no tienen sentido. Se revisan antes de añadirlas al juego.</p>
+      <div class="hero-actions">
+        <button type="button" class="btn ghost" data-act="fb-open" data-mode="suggest" data-i18n="fbSuggestBtn">Sugerir una carta</button>
+        <button type="button" class="btn ghost" data-act="fb-open" data-mode="report" data-i18n="fbReportBtn">Reportar una carta</button>
+      </div>
+    </div>
   </section>
 
   <section id="game" hidden>
@@ -416,7 +444,7 @@ aside.board{background:var(--surface);border:1px solid var(--line);border-radius
         <ol id="board"></ol>
       </aside>
     </div>
-    <div class="game-foot"><div class="langs" role="group" aria-label="Idioma" data-langs></div></div>
+    <div class="game-foot"><button type="button" class="linkbtn" data-act="fb-open" data-mode="report" data-i18n="fbReportHere">Reportar una de estas cartas</button><div class="langs" role="group" aria-label="Idioma" data-langs></div></div>
   </section>
 
   <section id="demo" class="demo" hidden aria-labelledby="demoTitle">
@@ -461,9 +489,60 @@ aside.board{background:var(--surface);border:1px solid var(--line);border-radius
       <button type="button" id="prSend" class="btn big" data-act="pr-send" disabled data-i18n="prSend">Responder</button>
       <button type="button" class="btn ghost" data-act="pr-skip" data-i18n="prSkip">Otra carta negra</button>
     </div>
+    <p><button type="button" class="linkbtn" data-act="fb-open" data-mode="report" data-i18n="fbReportHere">Reportar una de estas cartas</button></p>
     <div class="pr-last" id="prLast" hidden></div>
     <div class="pr-foot"><div class="langs" role="group" aria-label="Idioma" data-langs></div></div>
   </section>
+
+  <dialog id="fbDlg" class="fb-dlg" aria-labelledby="fbTitle">
+    <div class="fb-in">
+      <div class="fb-head">
+        <h2 id="fbTitle"></h2>
+        <button type="button" class="btn ghost sm" data-act="fb-close" data-i18n="close">Cerrar</button>
+      </div>
+      <div id="fbForm" class="fb-in0">
+        <div class="seg"><div class="opts">
+          <button type="button" data-act="fb-mode" data-mode="suggest" data-i18n="fbTabSuggest">Sugerir</button>
+          <button type="button" data-act="fb-mode" data-mode="report" data-i18n="fbTabReport">Reportar</button>
+        </div></div>
+        <div id="fbSuggest" class="fb-in0">
+          <div class="seg"><span class="label" data-i18n="fbColorLabel">Tipo de carta</span><div class="opts">
+            <button type="button" data-act="fb-color" data-c="black" data-i18n="fbBlack">Negra</button>
+            <button type="button" data-act="fb-color" data-c="white" data-i18n="fbWhite">Blanca</button>
+          </div></div>
+          <label for="fbText" data-i18n="fbTextLabel">Texto de la carta</label>
+          <textarea id="fbText" rows="3" maxlength="200"></textarea>
+          <p class="hint" id="fbTextHint"></p>
+          <div id="fbPreview"></div>
+        </div>
+        <div id="fbReport" class="fb-in0">
+          <span class="label" data-i18n="fbWhich">¿Qué carta?</span>
+          <div id="fbPicked"></div>
+          <div id="fbFind" class="fb-in0">
+            <label for="fbSearch" class="sr-only" data-i18n="fbWhich">¿Qué carta?</label>
+            <input id="fbSearch" autocomplete="off" placeholder="Busca por una palabra de la carta" data-i18n-ph="fbSearchPh">
+            <div id="fbResults" class="fb-results"></div>
+          </div>
+          <div class="seg"><span class="label" data-i18n="fbReason">Motivo</span><div class="opts" id="fbReasons"></div></div>
+          <label for="fbComment" data-i18n="fbComment">Comentario (opcional)</label>
+          <textarea id="fbComment" rows="2" maxlength="500"></textarea>
+        </div>
+        <label for="fbName" data-i18n="fbName">Tu nombre (opcional)</label>
+        <input id="fbName" maxlength="40" autocomplete="nickname">
+        <input id="fbHp" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+        <p id="fbErr" class="err" role="alert" hidden></p>
+        <button type="button" id="fbSend" class="btn big" data-act="fb-send" data-i18n="fbSend">Enviar</button>
+        <p class="hint" data-i18n="fbNote">Lo revisa quien mantiene el juego antes de cambiar nada.</p>
+      </div>
+      <div id="fbDone" class="fb-in0" hidden>
+        <p class="pr-ask" data-i18n="fbThanks">¡Gracias! Lo revisaremos.</p>
+        <div class="hero-actions">
+          <button type="button" class="btn" data-act="fb-again" data-i18n="fbAnother">Enviar otra</button>
+          <button type="button" class="btn ghost" data-act="fb-close" data-i18n="close">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  </dialog>
 </div>
 <div id="toast" role="status" aria-live="polite"></div>
 
@@ -859,6 +938,44 @@ const TX = {
   board: ["Marcador", "Marcador", "Marcador"],
   demoTitle: ["Partida de ejemplo", "Partida de exemplo", "Jogo de exemplo"],
   close: ["Cerrar", "Pechar", "Fechar"],
+  fbCtaTitle: ["¿Se te ocurre una carta?", "Ocórreseche unha carta?", "Tens uma ideia para uma carta?"],
+  fbCtaHint: ["Propón cartas nuevas o avisa de las que no tienen sentido. Se revisan antes de añadirlas al juego.", "Propón cartas novas ou avisa das que non teñen sentido. Revísanse antes de engadilas ao xogo.", "Propõe cartas novas ou avisa das que não fazem sentido. São revistas antes de entrarem no jogo."],
+  fbSuggestBtn: ["Sugerir una carta", "Suxerir unha carta", "Sugerir uma carta"],
+  fbReportBtn: ["Reportar una carta", "Reportar unha carta", "Reportar uma carta"],
+  fbReportHere: ["Reportar una de estas cartas", "Reportar unha destas cartas", "Reportar uma destas cartas"],
+  fbTabSuggest: ["Sugerir", "Suxerir", "Sugerir"],
+  fbTabReport: ["Reportar", "Reportar", "Reportar"],
+  fbColorLabel: ["Tipo de carta", "Tipo de carta", "Tipo de carta"],
+  fbBlack: ["Negra", "Negra", "Preta"],
+  fbWhite: ["Blanca", "Branca", "Branca"],
+  fbTextLabel: ["Texto de la carta", "Texto da carta", "Texto da carta"],
+  fbHintBlack: ["Escribe ___ (tres guiones bajos) en cada hueco: uno o dos por carta.", "Escribe ___ (tres guións baixos) en cada oco: un ou dous por carta.", "Escreve ___ (três underscores) em cada espaço: um ou dois por carta."],
+  fbHintWhite: ["Una respuesta corta que pueda encajar en muchas cartas negras.", "Unha resposta curta que poida encaixar en moitas cartas negras.", "Uma resposta curta que possa encaixar em muitas cartas pretas."],
+  fbEmpty: ["Escribe el texto de la carta.", "Escribe o texto da carta.", "Escreve o texto da carta."],
+  fbNeedBlank: ["Una carta negra necesita uno o dos huecos: ___.", "Unha carta negra precisa un ou dous ocos: ___.", "Uma carta preta precisa de um ou dois espaços: ___."],
+  fbNoBlank: ["Las cartas blancas no llevan huecos.", "As cartas brancas non levan ocos.", "As cartas brancas não levam espaços."],
+  fbWhich: ["¿Qué carta?", "Que carta?", "Que carta?"],
+  fbSearchPh: ["Busca por una palabra de la carta", "Busca por unha palabra da carta", "Procura por uma palavra da carta"],
+  fbOnScreen: ["Cartas en pantalla", "Cartas en pantalla", "Cartas no ecrã"],
+  fbNoResults: ["No hay ninguna carta con ese texto.", "Non hai ningunha carta con ese texto.", "Não há nenhuma carta com esse texto."],
+  fbChange: ["Cambiar de carta", "Cambiar de carta", "Escolher outra carta"],
+  fbReason: ["Motivo", "Motivo", "Motivo"],
+  fbR_nonsense: ["No tiene sentido", "Non ten sentido", "Não faz sentido"],
+  fbR_dislike: ["No me gusta", "Non me gusta", "Não gosto"],
+  fbR_translation: ["Traducción rara", "Tradución rara", "Tradução estranha"],
+  fbR_other: ["Otro", "Outro", "Outro"],
+  fbComment: ["Comentario (opcional)", "Comentario (opcional)", "Comentário (opcional)"],
+  fbName: ["Tu nombre (opcional)", "O teu nome (opcional)", "O teu nome (opcional)"],
+  fbSend: ["Enviar", "Enviar", "Enviar"],
+  fbSending: ["Enviando…", "Enviando…", "A enviar…"],
+  fbNote: ["Lo revisa quien mantiene el juego antes de cambiar nada.", "Revísao quen mantén o xogo antes de cambiar nada.", "Quem mantém o jogo revê tudo antes de mudar alguma coisa."],
+  fbThanks: ["¡Gracias! Lo revisaremos.", "Grazas! Revisarémolo.", "Obrigado! Vamos rever."],
+  fbAnother: ["Enviar otra", "Enviar outra", "Enviar outra"],
+  fbPick: ["Elige la carta que quieres reportar.", "Escolle a carta que queres reportar.", "Escolhe a carta que queres reportar."],
+  fbPickReason: ["Elige un motivo.", "Escolle un motivo.", "Escolhe um motivo."],
+  fbErrSend: ["No se ha podido enviar. Inténtalo de nuevo en un rato.", "Non se puido enviar. Téntao de novo nun anaco.", "Não foi possível enviar. Tenta outra vez daqui a pouco."],
+  fbErrOff: ["El buzón de sugerencias no está activado en este servidor.", "O buzón de suxestións non está activado neste servidor.", "A caixa de sugestões não está ativada neste servidor."],
+  fbErrRate: ["Has enviado muchas seguidas. Espera unos minutos.", "Enviaches moitas seguidas. Agarda uns minutos.", "Enviaste muitas seguidas. Espera uns minutos."],
   prBtn: ["Probar las cartas", "Probar as cartas", "Experimentar as cartas"],
   prTitle: ["Modo prueba", "Modo proba", "Modo de teste"],
   prHint: ["Juega solo para conocer las cartas. Con cada respuesta salen una carta negra y una mano nuevas.", "Xoga só para coñecer as cartas. Con cada resposta saen unha carta negra e unha man novas.", "Joga sozinho para conhecer as cartas. A cada resposta saem uma carta preta e uma mão novas."],
@@ -1412,6 +1529,7 @@ function setLang(l){
   applyStatic(); renderHome(); render();
   if (!$("#demo").hidden) demoShow();
   if (!$("#practice").hidden) prRender();
+  if ($("#fbDlg").open) fbRender();
 }
 function homeError(msg){ const e = $("#homeErr"); e.textContent = msg; e.hidden = !msg; }
 function renderHome(){
@@ -1734,6 +1852,99 @@ function prOpen(){
   $("#home").hidden = true; $("#practice").hidden = false;
   prRender(); window.scrollTo(0, 0); $("#prTitle").focus({ preventScroll: true });
 }
+/* ---------- Sugerencias y reportes de cartas (los recibe api/feedback.js) ---------- */
+const FB = { mode: "suggest", color: "white", ctx: [], list: [], pick: null, reason: "", sending: false };
+const FB_REASONS = ["nonsense", "dislike", "translation", "other"];
+const fold = s => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+// Una carta como { color, list, i, id }: list/i dicen dónde está en el código; id es el del juego para pintarla
+function fbRef(color, id){
+  if (color === "black") return { color, list: "BLACK_T", i: id, id };
+  if (id < NW) return { color, list: "NAMES", i: id % NAMES.length, id: id % NAMES.length };
+  return { color, list: "WHITE_T", i: id - NW, id };
+}
+const fbText = c => (c.color === "black" ? BLACK[c.id].t : W(c.id));
+const fbAll = () => [...BLACK.map((b, i) => fbRef("black", i)), ...prWhiteIds().map(id => fbRef("white", id))];
+// Las cartas que hay en pantalla (modo prueba o partida) para reportarlas sin buscarlas
+function fbContext(){
+  if (!$("#practice").hidden && BLACK[PR.bk]) return [fbRef("black", PR.bk), ...PR.hand.map(id => fbRef("white", id))];
+  const st = S.st; if (!S.nroom || !st || !BLACK[st.bk]) return [];
+  const me = mySeat(st);
+  const hand = me >= 0 ? handOf(st, me).filter(id => id >= 0 && id < WCOUNT) : [];
+  return [fbRef("black", st.bk), ...hand.map(id => fbRef("white", id))];
+}
+function fbOptHTML(c, k){
+  const cls = "fb-opt " + (c.color === "black" ? "b" : "w");
+  const inner = c.color === "black" ? blackHTML(BLACK[c.id]) : esc(W(c.id));
+  return k == null ? `<div class="${cls}">${inner}</div>` : `<button type="button" class="${cls}" data-act="fb-pick" data-k="${k}">${inner}</button>`;
+}
+function fbRender(){
+  const sug = FB.mode === "suggest";
+  $("#fbTitle").textContent = t(sug ? "fbSuggestBtn" : "fbReportBtn");
+  document.querySelectorAll("#fbDlg [data-act=fb-mode]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.mode === FB.mode)));
+  $("#fbSuggest").hidden = !sug; $("#fbReport").hidden = sug;
+  if (sug) {
+    document.querySelectorAll("#fbDlg [data-act=fb-color]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.c === FB.color)));
+    $("#fbTextHint").textContent = t(FB.color === "black" ? "fbHintBlack" : "fbHintWhite");
+    const txt = $("#fbText").value.trim().replace(/_{2,}/g, "___");
+    const blk = { t: txt, p: Math.max(1, (txt.match(/___/g) || []).length) };
+    setHTML($("#fbPreview"), !txt ? "" : FB.color === "black" ? blackCard(blk, false) : `<div class="card white" style="min-height:0;padding-bottom:16px">${esc(txt)}</div>`);
+    return;
+  }
+  setHTML($("#fbPicked"), FB.pick ? `<div class="fb-picked">${fbOptHTML(FB.pick)}<button type="button" class="linkbtn" data-act="fb-unpick">${esc(t("fbChange"))}</button></div>` : "");
+  $("#fbFind").hidden = !!FB.pick;
+  if (!FB.pick) {
+    const q = fold($("#fbSearch").value.trim());
+    let head = "";
+    if (q.length >= 2) { FB.list = fbAll().filter(c => fold(fbText(c)).includes(q)).slice(0, 8); if (!FB.list.length) head = `<p class="hint">${esc(t("fbNoResults"))}</p>`; }
+    else { FB.list = FB.ctx; if (FB.list.length) head = `<span class="label">${esc(t("fbOnScreen"))}</span>`; }
+    setHTML($("#fbResults"), head + FB.list.map((c, k) => fbOptHTML(c, k)).join(""));
+  }
+  setHTML($("#fbReasons"), FB_REASONS.map(r => `<button type="button" data-act="fb-reason" data-r="${r}" aria-pressed="${r === FB.reason}">${esc(t("fbR_" + r))}</button>`).join(""));
+}
+function fbError(msg){ const e = $("#fbErr"); e.textContent = msg; e.hidden = !msg; }
+function fbOpen(mode){
+  FB.mode = mode === "report" ? "report" : "suggest"; FB.ctx = fbContext(); FB.pick = null; FB.reason = "";
+  $("#fbSearch").value = ""; fbError("");
+  $("#fbForm").hidden = false; $("#fbDone").hidden = true;
+  const nm = $("#fbName"); if (!nm.value) nm.value = load("cxc:name") || "";
+  fbRender();
+  const d = $("#fbDlg");
+  if (!d.open) { if (typeof d.showModal === "function") d.showModal(); else d.setAttribute("open", ""); }
+  setTimeout(() => { const f = FB.mode === "suggest" ? $("#fbText") : FB.ctx.length ? $("#fbResults .fb-opt") : $("#fbSearch"); if (f) f.focus(); }, 30);
+}
+function fbClose(){ const d = $("#fbDlg"); if (typeof d.close === "function") d.close(); else d.removeAttribute("open"); }
+async function fbSend(){
+  if (FB.sending) return;
+  let body;
+  if (FB.mode === "suggest") {
+    const text = $("#fbText").value.trim().replace(/_{2,}/g, "___").slice(0, 200);
+    const n = (text.match(/___/g) || []).length;
+    if (text.length < 3) { fbError(t("fbEmpty")); $("#fbText").focus(); return; }
+    if (FB.color === "black" && (n < 1 || n > 2)) { fbError(t("fbNeedBlank")); $("#fbText").focus(); return; }
+    if (FB.color === "white" && n) { fbError(t("fbNoBlank")); $("#fbText").focus(); return; }
+    body = { type: "suggest", color: FB.color, text };
+  } else {
+    if (!FB.pick) { fbError(t("fbPick")); return; }
+    if (!FB.reason) { fbError(t("fbPickReason")); return; }
+    const c = FB.pick;
+    body = { type: "report", color: c.color, ref: { list: c.list, i: c.i }, text: fbText(c), reason: FB.reason, comment: $("#fbComment").value.trim().slice(0, 500) };
+  }
+  Object.assign(body, { name: cleanText($("#fbName").value, 40), lang: LANG, hp: $("#fbHp").value });
+  fbError(""); FB.sending = true;
+  const btn = $("#fbSend"); btn.disabled = true; btn.textContent = t("fbSending");
+  try {
+    const r = await fetch("api/feedback", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+    if (!r.ok) throw r.status;
+    if (FB.mode === "suggest") $("#fbText").value = "";
+    else { FB.pick = null; FB.reason = ""; $("#fbComment").value = ""; }
+    $("#fbForm").hidden = true; $("#fbDone").hidden = false;
+    $("#fbDone .btn").focus();
+  } catch (e) {
+    fbError(t(e === 404 || e === 405 || e === 503 ? "fbErrOff" : e === 429 ? "fbErrRate" : "fbErrSend"));
+  } finally {
+    FB.sending = false; btn.disabled = false; btn.textContent = t("fbSend");
+  }
+}
 function prClose(){
   $("#practice").hidden = true;
   if (!S.nroom) { $("#home").hidden = false; renderHome(); }
@@ -1760,6 +1971,8 @@ function bind(){
   $("#leaveBtn").addEventListener("click", () => leaveRoom(false));
   $("#sendBtn").addEventListener("click", sendSub);
   $("#remoBtn").addEventListener("click", remo);
+  $("#fbText").addEventListener("input", () => { fbError(""); fbRender(); });
+  $("#fbSearch").addEventListener("input", fbRender);
   $("#blankIn").addEventListener("input", e => { S.blankText = e.target.value.slice(0, 60); renderPreview(); });
   document.addEventListener("click", e => {
     const el = e.target.closest("[data-act]"); if (!el || el.disabled) return;
@@ -1777,6 +1990,15 @@ function bind(){
     else if (a === "remove") hostDo("remove", Number(el.dataset.i));
     else if (a === "av-pick") { avIn.value = el.dataset.av; S.avatar = cleanAvatar(el.dataset.av); store("cxc:avatar", S.avatar); renderHome(); }
     else if (a === "av-clear") { avIn.value = ""; S.avatar = ""; store("cxc:avatar", ""); renderHome(); }
+    else if (a === "fb-open") fbOpen(el.dataset.mode);
+    else if (a === "fb-close") fbClose();
+    else if (a === "fb-mode") { FB.mode = el.dataset.mode; fbError(""); fbRender(); }
+    else if (a === "fb-color") { FB.color = el.dataset.c; fbError(""); fbRender(); }
+    else if (a === "fb-pick") { FB.pick = FB.list[Number(el.dataset.k)] || null; fbError(""); fbRender(); }
+    else if (a === "fb-unpick") { FB.pick = null; fbRender(); $("#fbSearch").focus(); }
+    else if (a === "fb-reason") { FB.reason = el.dataset.r; fbError(""); fbRender(); }
+    else if (a === "fb-send") fbSend();
+    else if (a === "fb-again") { $("#fbDone").hidden = true; $("#fbForm").hidden = false; fbRender(); }
     else if (a === "pr-open") prOpen();
     else if (a === "pr-close") prClose();
     else if (a === "pr-card") prToggle(Number(el.dataset.id));
