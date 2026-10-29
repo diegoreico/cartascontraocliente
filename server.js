@@ -9,6 +9,7 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const { WebSocketServer } = require("ws");
+const feedback = require("./api/feedback");
 
 const PORT = Number(process.env.PORT) || 8080;
 const MAX_PRESENCE_BYTES = 4096;     // por persona y sala
@@ -32,6 +33,7 @@ const server = http.createServer((req, res) => {
     res.end(INDEX);
     return;
   }
+  if (url === "/api/feedback") { feedback(req, res); return; }
   if (req.method === "GET" && VENDOR[url]) {
     res.writeHead(200, { "content-type": "text/javascript; charset=utf-8", "cache-control": "public, max-age=86400", "x-content-type-options": "nosniff" });
     res.end(VENDOR[url]);
