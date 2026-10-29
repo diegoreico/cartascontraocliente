@@ -267,6 +267,11 @@ aside.board{background:var(--surface);border:1px solid var(--line);border-radius
   aside.board{position:sticky;top:calc(env(safe-area-inset-top,0px) + 76px)}
   .table.solo{grid-template-columns:minmax(0,1fr)}
 }
+/* Lectura de propuestas de una en una */
+.card.reading{min-height:0;font-size:clamp(19px,4.6vw,24px);padding:22px 20px;animation:pop .35s ease both}
+.read-prog{display:flex;gap:6px}
+.read-prog span{flex:1;height:4px;border-radius:4px;background:var(--line)}
+.read-prog span.on{background:var(--accent)}
 /* Modo prueba */
 .practice{display:grid;gap:14px}
 .pr-ask{font:700 19px/1.3 var(--f-display);margin:0}
@@ -305,7 +310,7 @@ button.fb-opt:hover{outline:2px solid var(--accent);outline-offset:2px}
   *{transition:none!important}
   .stamp{animation:none}
   .countdown span{animation:none;transform:scaleX(.5)}
-  .pop,.demo-board li.bump .pts,.caret{animation:none}
+  .pop,.demo-board li.bump .pts,.caret,.card.reading{animation:none}
   .tap{display:none}
   .demo-prog span{animation:none;transform:scaleX(1)}
 }
@@ -925,7 +930,7 @@ const TX = {
   rulesTitle: ["Cómo se juega", "Como se xoga", "Como se joga"],
   rule1: ["En cada ronda, una persona hace de <b>cliente</b> y sale una carta negra.", "En cada rolda, unha persoa fai de <b>cliente</b> e sae unha carta negra.", "Em cada ronda, uma pessoa faz de <b>cliente</b> e sai uma carta preta."],
   rule2: ["El resto elige en su mano la carta blanca que mejor la completa (o dos, si la carta lo pide) y la envía.", "O resto escolle na súa man a carta branca que mellor a completa (ou dúas, se a carta o pide) e envíaa.", "Os outros escolhem na sua mão a carta branca que melhor a completa (ou duas, se a carta o pedir) e enviam-na."],
-  rule3: ["El cliente lee las propuestas sin saber de quién son y firma la que más le guste. Esa persona gana un punto.", "O cliente le as propostas sen saber de quen son e asina a que máis lle guste. Esa persoa gaña un punto.", "O cliente lê as propostas sem saber de quem são e assina a de que mais gostar. Essa pessoa ganha um ponto."],
+  rule3: ["El cliente lee en voz alta las propuestas, de una en una y sin saber de quién son. Después las ve todas juntas y firma la que más le guste. Esa persona gana un punto.", "O cliente le en voz alta as propostas, dunha en unha e sen saber de quen son. Despois veas todas xuntas e asina a que máis lle guste. Esa persoa gaña un punto.", "O cliente lê em voz alta as propostas, uma a uma e sem saber de quem são. Depois vê-as todas juntas e assina a de que mais gostar. Essa pessoa ganha um ponto."],
   rule4: ["Todo el mundo roba hasta completar la mano y el papel de cliente pasa a la siguiente persona.", "Todo o mundo colle cartas ata completar a man e o papel de cliente pasa á seguinte persoa.", "Todos tiram cartas até completar a mão e o papel de cliente passa para a pessoa seguinte."],
   rule5: ["Gana quien llegue primero a los puntos acordados en la sala de espera.", "Gaña quen chegue antes aos puntos acordados na sala de espera.", "Ganha quem chegar primeiro aos pontos combinados na sala de espera."],
   ruleBlank: ["<b>Carta en blanco:</b> escribe tu propia respuesta. Cada persona tiene las que se acuerden al crear la partida.", "<b>Carta en branco:</b> escribe a túa propia resposta. Cada persoa ten as que se acorden ao crear a partida.", "<b>Carta em branco:</b> escreves a tua própria resposta. Cada pessoa tem as que se combinarem ao criar o jogo."],
@@ -1058,6 +1063,12 @@ const TX = {
   judgeCz: ["Elige la propuesta que más te convenza.", "Escolle a proposta que máis te convenza.", "Escolhe a proposta que mais te convence."],
   signing: ["Firmando…", "Asinando…", "A assinar…"],
   judgeOther: ["{c} está leyendo las propuestas.", "{c} está lendo as propostas.", "{c} está a ler as propostas."],
+  readCz: ["Lee en voz alta la propuesta {i} de {n}.", "Le en voz alta a proposta {i} de {n}.", "Lê em voz alta a proposta {i} de {n}."],
+  readOther: ["{c} está leyendo la propuesta {i} de {n}.", "{c} está lendo a proposta {i} de {n}.", "{c} está a ler a proposta {i} de {n}."],
+  nextProp: ["Siguiente propuesta", "Seguinte proposta", "Proposta seguinte"],
+  seeAll: ["Ver todas y elegir", "Ver todas e escoller", "Ver todas e escolher"],
+  revealHost: ["El cliente no está: mostrar la siguiente", "O cliente non está: amosar a seguinte", "O cliente não está: mostrar a seguinte"],
+  chooseOther: ["{c} está eligiendo la mejor propuesta.", "{c} está escollendo a mellor proposta.", "{c} está a escolher a melhor proposta."],
   theClient: ["El cliente", "O cliente", "O cliente"],
   signBtn: ["Firmar esta propuesta", "Asinar esta proposta", "Assinar esta proposta"],
   stamp: ["Aprobado", "Aprobado", "Aprovado"],
@@ -1298,26 +1309,30 @@ function nextCzar(st){
   const seats = activeSeats(st); return seats.length ? seats[0] : 0;
 }
 function nextRound(st){
-  st.sb = {}; st.rv = []; st.w = -1; st.wr = 0;
+  st.sb = {}; st.rv = []; st.rn = 0; st.w = -1; st.wr = 0;
   const seats = activeSeats(st);
   const max = seats.reduce((m, i) => Math.max(m, st.pl[i].s), 0);
   if (st.r > 0 && max >= st.cfg.t) { st.ph = "end"; return; }
   for (const i of seats) refill(st, i);
   st.r++; st.cz = nextCzar(st); st.bk = drawBlack(st); st.ph = "play"; S.czarGoneAt = 0;
 }
-function toJudge(st){ st.rv = shuffle(Object.keys(st.sb).map(Number)); st.ph = "judge"; S.czarGoneAt = 0; }
+function toJudge(st){ st.rv = shuffle(Object.keys(st.sb).map(Number)); st.rn = 1; st.ph = "judge"; S.czarGoneAt = 0; }
+// rn: propuesta que se está leyendo en voz alta (1..n), de una en una; con rn > n se ven todas para elegir.
+// Las partidas de antes de este cambio no tienen rn: cuentan como todas leídas.
+const shownSubs = st => Math.min(st.rv.length, st.rn == null ? st.rv.length : st.rn);
+const allShown = st => st.rn == null || st.rn > st.rv.length;
 function award(st, seat, random){ st.w = seat; st.wr = random ? 1 : 0; if (st.pl[seat]) st.pl[seat].s++; st.ph = "res"; S.resAt = Date.now(); }
 function startGame(st){
   const seats = activeSeats(st); if (seats.length < 3) return;
   st.hs = handSize(seats.length);
   for (const i of seats) Object.assign(st.pl[i], { s: 0, g: 0, b: st.cfg.b, h: "" });
-  st.r = 0; st.cz = -1; st.ub = ""; st.sb = {}; st.rv = []; st.w = -1; st.wr = 0;
+  st.r = 0; st.cz = -1; st.ub = ""; st.sb = {}; st.rv = []; st.rn = 0; st.w = -1; st.wr = 0;
   nextRound(st);
 }
 function newGame(st){
   const present = presentKeys();
   st.pl = st.pl.filter(p => !p.x && present.has(p.k)).map(p => ({ k: p.k, n: p.n, a: p.a || "", s: 0, b: 0, g: 0, h: "" }));
-  Object.assign(st, { ph: "lobby", r: 0, cz: -1, bk: -1, ub: "", sb: {}, rv: [], w: -1, wr: 0 });
+  Object.assign(st, { ph: "lobby", r: 0, cz: -1, bk: -1, ub: "", sb: {}, rv: [], rn: 0, w: -1, wr: 0 });
 }
 function hostSync(){
   if (!S.isHost || !S.st || !S.nroom) return;
@@ -1358,7 +1373,8 @@ function hostSync(){
     if (Object.keys(st.sb).length > 0 && waiting.length === 0) { toJudge(st); ch = true; }
   } else if (st.ph === "judge") {
     const cz = st.pl[st.cz]; const pr = cz && pres.get(cz.k);
-    if (pr && pr.pick && pr.pick.r === st.r && Number.isInteger(pr.pick.i) && pr.pick.i >= 0 && pr.pick.i < st.rv.length) { award(st, st.rv[pr.pick.i], false); ch = true; }
+    if (pr && pr.rev && pr.rev.r === st.r && Number.isInteger(pr.rev.n) && !allShown(st) && pr.rev.n > st.rn) { st.rn = Math.min(st.rv.length + 1, pr.rev.n); ch = true; }
+    if (pr && pr.pick && pr.pick.r === st.r && allShown(st) && Number.isInteger(pr.pick.i) && pr.pick.i >= 0 && pr.pick.i < st.rv.length) { award(st, st.rv[pr.pick.i], false); ch = true; }
     else if (!pr || cz.x) { if (!S.czarGoneAt) S.czarGoneAt = Date.now(); else if (Date.now() - S.czarGoneAt > 25000 && st.rv.length) { award(st, st.rv[Math.floor(Math.random() * st.rv.length)], true); ch = true; } }
     else S.czarGoneAt = 0;
   } else if (st.ph === "res") {
@@ -1374,6 +1390,7 @@ function hostDo(op, arg){
   else if (op === "cfg" && st.ph === "lobby") st.cfg[arg.k] = arg.v;
   else if (op === "judge" && st.ph === "play" && Object.keys(st.sb).length) toJudge(st);
   else if (op === "skip" && (st.ph === "play" || st.ph === "judge")) nextRound(st);
+  else if (op === "reveal" && st.ph === "judge" && !allShown(st)) st.rn++;
   else if (op === "random" && st.ph === "judge" && st.rv.length) award(st, st.rv[Math.floor(Math.random() * st.rv.length)], true);
   else if (op === "next" && st.ph === "res") nextRound(st);
   else if (op === "again" && st.ph === "end") newGame(st);
@@ -1498,7 +1515,12 @@ function sendSub(){
   setMyPres({ sub: { r: st.r, c: encList(S.sel), t: S.sel.includes(BLANK) ? txt : "" } });
   render();
 }
-function confirmPick(){ const st = S.st; if (!st || st.ph !== "judge" || mySeat(st) !== st.cz || S.pickIdx < 0) return; setMyPres({ pick: { r: st.r, i: S.pickIdx } }); render(); }
+function confirmPick(){ const st = S.st; if (!st || st.ph !== "judge" || mySeat(st) !== st.cz || S.pickIdx < 0 || !allShown(st)) return; setMyPres({ pick: { r: st.r, i: S.pickIdx } }); render(); if (S.isHost) hostSync(); }
+function revealNext(){
+  const st = S.st; if (!st || st.ph !== "judge" || mySeat(st) !== st.cz || allShown(st)) return;
+  setMyPres({ rev: { r: st.r, n: st.rn + 1 } }); render();
+  if (S.isHost) hostSync();
+}
 function remo(){
   const st = S.st; if (!canPlay(st)) return;
   if (!S.remoArm) { S.remoArm = true; clearTimeout(S.remoT); S.remoT = setTimeout(() => { S.remoArm = false; render(); }, 4000); render(); return; }
@@ -1660,10 +1682,20 @@ function renderPreview(){
 function renderJudge(st){
   const me = mySeat(st); const blk = BLACK[st.bk] || BLACK[0]; const cz = st.pl[st.cz];
   const isCz = me === st.cz && me >= 0;
+  if (!allShown(st)) {
+    // Lectura: una propuesta cada vez; el cliente pasa a la siguiente cuando la ha leído
+    const k = st.rn; const n = st.rv.length; const last = k >= n;
+    const asked = isCz && S.myPres.rev && S.myPres.rev.r === st.r && S.myPres.rev.n > k;
+    const head = isCz ? t("readCz", { i: k, n }) : t("readOther", { c: cz ? cz.n : t("theClient"), i: k, n });
+    const card = `<div class="card white reading">${fillHTML(blk, answersOf(st.sb[st.rv[k - 1]]))}</div>`;
+    const btn = isCz ? `<button type="button" class="btn big" data-act="reveal" ${asked ? "disabled" : ""}>${esc(last ? t("seeAll") : t("nextProp"))}</button>` : "";
+    setHTML($("#judgeV"), `<div>${clientLine(st, me)}${blackCard(blk, true)}</div><div class="status"><p class="big">${esc(head)}</p></div><div class="read-prog" aria-hidden="true">${st.rv.map((x, i) => `<span class="${i < k ? "on" : ""}"></span>`).join("")}</div>${card}${btn}`);
+    return;
+  }
   const picking = isCz && S.myPres.pick && S.myPres.pick.r === st.r;
   const head = isCz
     ? `<p class="big">${esc(picking ? t("signing") : t("judgeCz"))}</p>`
-    : `<p class="big">${esc(t("judgeOther", { c: cz ? cz.n : t("theClient") }))}</p>`;
+    : `<p class="big">${esc(t("chooseOther", { c: cz ? cz.n : t("theClient") }))}</p>`;
   const list = st.rv.map((seat, i) => `<li><button type="button" class="card white${S.pickIdx === i ? " sel" : ""}" data-act="pick" data-i="${i}" ${isCz && !picking ? "" : "disabled"} aria-pressed="${S.pickIdx === i}">${fillHTML(blk, answersOf(st.sb[seat]))}</button></li>`).join("");
   const btn = isCz ? `<button type="button" class="btn big" data-act="confirm" ${S.pickIdx >= 0 && !picking ? "" : "disabled"}>${esc(t("signBtn"))}</button>` : "";
   setHTML($("#judgeV"), `<div>${clientLine(st, me)}${blackCard(blk, true)}</div><div class="status">${head}</div><ul class="subs">${list}</ul>${btn}`);
@@ -1700,7 +1732,7 @@ function renderHostBar(st){
   const czPresent = st.pl[st.cz] && presentKeys().has(st.pl[st.cz].k);
   let b = `<span class="label">${esc(t("hostCtl"))}</span>`;
   if (st.ph === "play") b += `<button type="button" class="btn sm" data-act="host" data-op="judge" ${nsub ? "" : "disabled"}>${esc(t("toJudge", { n: nsub }))}</button><button type="button" class="btn ghost sm" data-act="host" data-op="skip">${esc(t("skip"))}</button>`;
-  else if (st.ph === "judge") b += `${czPresent ? "" : `<button type="button" class="btn sm" data-act="host" data-op="random">${esc(t("randomBtn"))}</button>`}<button type="button" class="btn ghost sm" data-act="host" data-op="skip">${esc(t("skip"))}</button>`;
+  else if (st.ph === "judge") b += `${czPresent ? "" : allShown(st) ? `<button type="button" class="btn sm" data-act="host" data-op="random">${esc(t("randomBtn"))}</button>` : `<button type="button" class="btn sm" data-act="host" data-op="reveal">${esc(t("revealHost"))}</button>`}<button type="button" class="btn ghost sm" data-act="host" data-op="skip">${esc(t("skip"))}</button>`;
   else if (st.ph === "res") b += `<button type="button" class="btn sm" data-act="host" data-op="next">${esc(t("nextNow"))}</button>`;
   else if (st.ph === "end") b += `<button type="button" class="btn sm" data-act="host" data-op="again">${esc(t("newGame"))}</button>`;
   setHTML(hb, b);
@@ -1984,6 +2016,7 @@ function bind(){
     else if (a === "card") toggleCard(Number(el.dataset.id));
     else if (a === "pick") { if (S.st && mySeat() === S.st.cz) { S.pickIdx = Number(el.dataset.i); render(); } }
     else if (a === "confirm") confirmPick();
+    else if (a === "reveal") revealNext();
     else if (a === "unsend") { setMyPres({ sub: null }); render(); }
     else if (a === "host") hostDo(el.dataset.op);
     else if (a === "cfg") hostDo("cfg", { k: el.dataset.k, v: Number(el.dataset.v) });
