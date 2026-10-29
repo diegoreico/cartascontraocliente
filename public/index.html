@@ -1114,8 +1114,8 @@ const TX = {
   d4: ["El resto mira su mano y busca la carta que mejor completa la frase.", "O resto mira a súa man e busca a carta que mellor completa a frase.", "Os outros olham para a sua mão e procuram a carta que melhor completa a frase."],
   d5: ["María elige la suya y ve cómo queda la frase antes de enviarla.", "María escolle a súa e ve como queda a frase antes de enviala.", "A María escolhe a sua e vê como fica a frase antes de a enviar."],
   d6: ["Las propuestas llegan sin nombre. Cuando han enviado todos, pasan a la clienta.", "As propostas chegan sen nome. Cando enviaron todos, pasan á clienta.", "As propostas chegam sem nome. Quando todos enviaram, passam para a cliente."],
-  d7: ["Vane lee las propuestas en voz alta…", "Vane le as propostas en voz alta…", "A Vane lê as propostas em voz alta…"],
-  d8: ["…y firma la que más le convence.", "…e asina a que máis a convence.", "…e assina a que mais a convence."],
+  d7: ["Vane lee en voz alta las propuestas, de una en una, y pasa a la siguiente cuando acaba…", "Vane le en voz alta as propostas, dunha en unha, e pasa á seguinte cando remata…", "A Vane lê as propostas em voz alta, uma a uma, e passa à seguinte quando acaba…"],
+  d8: ["…después las ve todas juntas y firma la que más le convence.", "…despois veas todas xuntas e asina a que máis a convence.", "…depois vê-as todas juntas e assina a que mais a convence."],
   d9: ["Se descubre de quién era cada carta. María gana el punto y el papel de cliente pasa a Jorge.", "Descóbrese de quen era cada carta. María gaña o punto e o papel de cliente pasa a Jorge.", "Descobre-se de quem era cada carta. A María ganha o ponto e o papel de cliente passa para o Jorge."],
   d10: ["Ronda 2. Algunas cartas piden dos respuestas: se eligen en el orden en que se leen.", "Rolda 2. Algunhas cartas piden dúas respostas: escóllense na orde en que se len.", "Ronda 2. Algumas cartas pedem duas respostas: escolhem-se pela ordem em que se leem."],
   d11: ["Jorge firma la de Jesús. Ya van empatados.", "Jorge asina a de Jesús. Xa van empatados.", "O Jorge assina a do Jesús. Já estão empatados."],
@@ -1781,7 +1781,22 @@ const DEMO = [
   { cap: "d4", dur: 4000, html: () => dWho(t("demoScreen", { n: "María" })) + blackCard(BLACK[B1], false) + `<div class="hand demo-hand">${H1.map((id, i) => dCard(W(id), { pop: true, d: i * 120 })).join("")}</div>` },
   { cap: "d5", dur: 4600, html: () => dWho(t("demoScreen", { n: "María" })) + `<div class="hand demo-hand">${H1.map((id, i) => dCard(W(id), { sel: i === 2, tap: i === 2 })).join("")}</div><div class="preview pop" style="--d:700ms"><span class="label">${esc(t("readAsF"))}</span>${dFill(B1, [W(H1[2])])}</div>` + dBtn(t("sendToClientF"), 1600) },
   { cap: "d6", dur: 3800, html: () => dRound(1, "Vane") + `<ul class="demo-ticks">${["Jorge", "María", "Jesús"].map((n, i) => `<li class="pop" style="--d:${i * 700}ms">${avHTML(dp(n))}${esc(n)}<span class="ok">${esc(t("propSent"))}</span></li>`).join("")}</ul>` },
-  { cap: "d7", dur: 4400, html: () => dWho(t("demoScreenClientF", { n: "Vane" })) + blackCard(BLACK[B1], false) + `<div class="subs">${S1.map((s, i) => dFill(B1, [W(s[1])], { pop: true, d: i * 600 })).join("")}</div>` },
+  { cap: "d7", dur: 7800, html: () => dWho(t("demoScreenClientF", { n: "Vane" })) + blackCard(BLACK[B1], false) + `<p class="pr-ask" id="demoRead"></p><div class="read-prog" id="demoReadProg">${S1.map(() => "<span></span>").join("")}</div><div id="demoReadCard"></div><div><span class="btn big" id="demoReadBtn"></span></div>`,
+    after(){
+      // Igual que en la partida: una propuesta cada vez y "Siguiente propuesta" hasta la última
+      let k = 0;
+      const show = () => {
+        if (!$("#demoRead")) { clearInterval(D.typeT); return; }
+        if (k > 0 && !D.playing) return;
+        k++;
+        $("#demoRead").textContent = t("readCz", { i: k, n: S1.length });
+        document.querySelectorAll("#demoReadProg span").forEach((el, i) => el.classList.toggle("on", i < k));
+        $("#demoReadCard").innerHTML = `<div class="card white reading">${fillHTML(BLACK[B1], [W(S1[k - 1][1])])}</div>`;
+        $("#demoReadBtn").textContent = k >= S1.length ? t("seeAll") : t("nextProp");
+        if (k >= S1.length) clearInterval(D.typeT);
+      };
+      clearInterval(D.typeT); show(); D.typeT = setInterval(show, 2500);
+    } },
   { cap: "d8", dur: 3200, html: () => dWho(t("demoScreenClientF", { n: "Vane" })) + `<div class="subs">${S1.map((s, i) => dFill(B1, [W(s[1])], { sel: i === 1, tap: i === 1 })).join("")}</div>` + dBtn(t("signBtn"), 900) },
   { cap: "d9", dur: 5600, html: () => `<div class="winner">${dFill(B1, [W(S1[1][1])], { stamp: true })}${dWin("María")}</div><div class="subs">${[S1[0], S1[2]].map((s, i) => dFill(B1, [W(s[1])], { who: s[0], pop: true, d: 700 + i * 300 })).join("")}</div>` + dBoard({ "María": 1 }, "María") },
   { cap: "d10", dur: 5600, html: () => dRound(2, "Jorge") + dWho(t("demoScreen", { n: "Jesús" })) + blackCard(BLACK[B2], false) + `<div class="hand demo-hand">${H2.map((id, i) => dCard(W(id), { sel: i === 0 || i === 2, badge: i === 0 ? 1 : (i === 2 ? 2 : 0), tap: i === 2 })).join("")}</div><div class="preview pop" style="--d:900ms"><span class="label">${esc(t("readAs"))}</span>${dFill(B2, [W(H2[0]), W(H2[2])])}</div>` },
