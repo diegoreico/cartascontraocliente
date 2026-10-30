@@ -1140,22 +1140,22 @@ const TX = {
   demoPlays3: ["Se juega a 3 puntos.", "Xógase a 3 puntos.", "Joga-se a 3 pontos."],
   demoTo3: ["A 3 puntos", "A 3 puntos", "A 3 pontos"],
   demoSkip: ["Rondas 4, 5 y 6", "Roldas 4, 5 e 6", "Rondas 4, 5 e 6"],
-  demoV3: ["Estoy en el kayak con Alex, no se ve nada", "Estou no kaiak con Alex, non se ve nada", "Estou no caiaque com o Alex, não se vê nada"],
+  demoV3: ["Se ha quedado encerrado en el Leiraparking", "Quedou pechado no Leiraparking", "Ficou fechado no Leiraparking"],
   d1: ["Una partida de ejemplo con cuatro personas, de principio a fin. Dura un minuto.", "Unha partida de exemplo con catro persoas, de principio a fin. Dura un minuto.", "Um jogo de exemplo com quatro pessoas, do princípio ao fim. Dura um minuto."],
   d2: ["Alguien crea la sala y comparte el código. Cada persona entra desde su móvil con su nombre y su avatar.", "Alguén crea a sala e comparte o código. Cada persoa entra dende o seu móbil co seu nome e o seu avatar.", "Alguém cria a sala e partilha o código. Cada pessoa entra no seu telemóvel com o seu nome e o seu avatar."],
   d3: ["Empieza la ronda 1. Vane hace de clienta y sale una carta negra.", "Comeza a rolda 1. Vane fai de clienta e sae unha carta negra.", "Começa a ronda 1. A Vane faz de cliente e sai uma carta preta."],
   d4: ["El resto mira su mano y busca la carta que mejor completa la frase.", "O resto mira a súa man e busca a carta que mellor completa a frase.", "Os outros olham para a sua mão e procuram a carta que melhor completa a frase."],
-  d5: ["María elige la suya y ve cómo queda la frase antes de enviarla.", "María escolle a súa e ve como queda a frase antes de enviala.", "A María escolhe a sua e vê como fica a frase antes de a enviar."],
+  d5: ["Jorge elige la suya y ve cómo queda la frase antes de enviarla.", "Jorge escolle a súa e ve como queda a frase antes de enviala.", "O Jorge escolhe a sua e vê como fica a frase antes de a enviar."],
   d6: ["Las propuestas llegan sin nombre. Cuando han enviado todos, pasan a la clienta.", "As propostas chegan sen nome. Cando enviaron todos, pasan á clienta.", "As propostas chegam sem nome. Quando todos enviaram, passam para a cliente."],
   d7: ["Vane lee en voz alta las propuestas, de una en una, y pasa a la siguiente cuando acaba…", "Vane le en voz alta as propostas, dunha en unha, e pasa á seguinte cando remata…", "A Vane lê as propostas em voz alta, uma a uma, e passa à seguinte quando acaba…"],
   d8: ["…después las ve todas juntas y firma la que más le convence.", "…despois veas todas xuntas e asina a que máis a convence.", "…depois vê-as todas juntas e assina a que mais a convence."],
-  d9: ["Al firmarla se descubre de quién era: María gana el punto. Las demás siguen siendo anónimas y el papel de cliente pasa a Jorge.", "Ao asinala descóbrese de quen era: María gaña o punto. As demais seguen sendo anónimas e o papel de cliente pasa a Jorge.", "Ao assiná-la descobre-se de quem era: a María ganha o ponto. As outras continuam anónimas e o papel de cliente passa para o Jorge."],
+  d9: ["Al firmarla se descubre de quién era: Jorge gana el punto. Las demás siguen siendo anónimas, y ahora le toca a Jorge hacer de cliente.", "Ao asinala descóbrese de quen era: Jorge gaña o punto. As demais seguen sendo anónimas, e agora tócalle a Jorge facer de cliente.", "Ao assiná-la descobre-se de quem era: o Jorge ganha o ponto. As outras continuam anónimas, e agora é a vez do Jorge fazer de cliente."],
   d10: ["Ronda 2. Algunas cartas piden dos respuestas: se eligen en el orden en que se leen.", "Rolda 2. Algunhas cartas piden dúas respostas: escóllense na orde en que se len.", "Ronda 2. Algumas cartas pedem duas respostas: escolhem-se pela ordem em que se leem."],
-  d11: ["Jorge firma la de Jesús. Ya van empatados.", "Jorge asina a de Jesús. Xa van empatados.", "O Jorge assina a do Jesús. Já estão empatados."],
+  d11: ["Jorge firma la de María. Ya van empatados.", "Jorge asina a de María. Xa van empatados.", "O Jorge assina a da María. Já estão empatados."],
   d12: ["Ronda 3. Con una carta en blanco escribes tu propia respuesta.", "Rolda 3. Cunha carta en branco escribes a túa propia resposta.", "Ronda 3. Com uma carta em branco escreves a tua própria resposta."],
-  d13: ["María firma la de Vane: una respuesta escrita a mano también puede ganar.", "María asina a de Vane: unha resposta escrita a man tamén pode gañar.", "A María assina a da Vane: uma resposta escrita à mão também pode ganhar."],
+  d13: ["María firma la de Jesús: una respuesta escrita a mano también puede ganar.", "María asina a de Jesús: unha resposta escrita a man tamén pode gañar.", "A María assina a do Jesús: uma resposta escrita à mão também pode ganhar."],
   d14: ["El papel de cliente sigue rotando ronda a ronda. Unas cuantas risas después…", "O papel de cliente segue rotando rolda a rolda. Unhas cantas risas despois…", "O papel de cliente vai rodando ronda a ronda. Umas quantas gargalhadas depois…"],
-  d15: ["María llega a 3 puntos y gana la partida. Ahora os toca a vosotros.", "María chega a 3 puntos e gaña a partida. Agora tócavos a vós.", "A María chega aos 3 pontos e ganha o jogo. Agora é a vossa vez."],
+  d15: ["Jorge llega a 3 puntos y gana la partida. Ahora os toca a vosotros.", "Jorge chega a 3 puntos e gaña a partida. Agora tócavos a vós.", "O Jorge chega aos 3 pontos e ganha o jogo. Agora é a vossa vez."],
 };
 function t(k, p){ const row = TX[k]; let s = row ? (row[li()] || row[0]) : k; if (p) s = s.replace(/\{(\w+)\}/g, (m, x) => (p[x] != null ? String(p[x]) : m)); return s; }
 const tn = (k, n, p) => t(k + (n === 1 ? "1" : "N"), Object.assign({ n }, p || {}));
@@ -1229,20 +1229,45 @@ function adapt(a, before){
   return s;
 }
 function blackHTML(blk){ return blk.t.split("___").map(esc).join('<span class="blank"></span>'); }
+// Preposición + artículo al rellenar un hueco: "por culpa de" + "el caballo" -> "por culpa del caballo"
+const CONTRACT = {
+  es: { de: { el: "del" }, a: { el: "al" } },
+  gl: {
+    de: { o: "do", a: "da", os: "dos", as: "das", un: "dun", unha: "dunha", uns: "duns", unhas: "dunhas" },
+    en: { o: "no", a: "na", os: "nos", as: "nas", un: "nun", unha: "nunha", uns: "nuns", unhas: "nunhas" },
+    a: { o: "ao", a: "á", os: "aos", as: "ás" },
+    con: { o: "co", a: "coa", os: "cos", as: "coas", un: "cun", unha: "cunha", uns: "cuns", unhas: "cunhas" },
+    por: { o: "polo", a: "pola", os: "polos", as: "polas" },
+  },
+  pt: {
+    de: { o: "do", a: "da", os: "dos", as: "das" },
+    em: { o: "no", a: "na", os: "nos", as: "nas", um: "num", uma: "numa", uns: "nuns", umas: "numas" },
+    a: { o: "ao", a: "à", os: "aos", as: "às" },
+    por: { o: "pelo", a: "pela", os: "pelos", as: "pelas" },
+  },
+};
+function contract(before, s){
+  const m = before.match(/(?:^|[\s(¿¡"«])(\p{L}+) $/u); if (!m) return [before, s];
+  const prep = m[1]; const rule = (CONTRACT[LANG] || {})[prep.toLowerCase()]; if (!rule) return [before, s];
+  const w = s.match(/^(\p{L}+)\s/u); if (!w || !Object.prototype.hasOwnProperty.call(rule, w[1])) return [before, s];
+  let joined = rule[w[1]]; if (/^\p{Lu}/u.test(prep)) joined = joined.charAt(0).toUpperCase() + joined.slice(1);
+  return [before.slice(0, before.length - prep.length - 1), joined + s.slice(w[1].length)];
+}
 function fillHTML(blk, answers){
   const parts = blk.t.split("___");
-  let out = esc(parts[0]);
+  let before = parts[0]; let out = "";
   for (let i = 1; i < parts.length; i++) {
     let seg = parts[i];
     const a = answers[i - 1];
     if (a != null && a !== "") {
-      const s = adapt(a, parts[i - 1]);
+      let s = adapt(a, parts[i - 1]);
+      [before, s] = contract(before, s);
       if (/[?!"»…]$/.test(s) && seg.startsWith(".")) seg = seg.slice(1);
-      out += "<mark>" + esc(s) + "</mark>";
-    } else out += '<span class="blank"></span>';
-    out += esc(seg);
+      out += esc(before) + "<mark>" + esc(s) + "</mark>";
+    } else out += esc(before) + '<span class="blank"></span>';
+    before = seg;
   }
-  return out;
+  return out + esc(before);
 }
 function answersOf(sub){ if (!sub) return []; const ids = decList(sub[0]); return ids.map(c => c === BLANK ? (sub[1] || "…") : W(c)); }
 // Carta negra de la ronda: la del mazo o la que ha escrito alguien en la partida (st.cb)
@@ -1845,14 +1870,15 @@ const HERO_W = wi("Un PoC que lleva tres años en producción.");
 const DP = ["Vane", "Jorge", "María", "Jesús"];
 const DAV = { "Vane": "📋", "Jorge": "💪", "María": "🎤", "Jesús": "🎉" };
 const dp = n => ({ n, a: DAV[n] || "" });
-const B1 = bi("El cliente ha rechazado la entrega por culpa de ___.");
-const H1 = ["Un dashboard que nadie va a abrir.", "Jesús organizando la cena de Navidad en septiembre.", "Un ganso con mala leche.", "La VPN del cliente.", "Un git push --force en viernes."].map(wi);
-const S1 = [["Jorge", wi("Un YAML de 3.000 líneas.")], ["María", wi("Un ganso con mala leche.")], ["Jesús", wi("Un CSS que solo funciona en el portátil de Jesús.")]];
-const B2 = bi("Lo vendimos como ___ y entregamos ___.");
-const H2 = ["Un agente de IA con acceso a producción.", "Los pájaros de Brais.", "Un Excel con macros de 2009.", "El café de la ofi.", "Kubernetes, porque sí."].map(wi);
-const B3 = bi("Excusa para no encender la cámara: ___.");
-const H3 = ["Un pod en CrashLoopBackOff.", "El jueves de oficina.", "Una factura a 120 días."].map(wi);
-const S3 = [["Jorge", wi("Pijama de cintura para abajo.")], ["Vane", -1], ["Jesús", wi("Un gato paseando por el teclado en plena demo.")]];
+// Ronda 1: clienta Vane, gana Jorge (S1[1]). Ronda 2: cliente Jorge, gana María. Ronda 3: clienta María, gana Jesús con una carta en blanco.
+const B1 = bi("No hay forma de sacar el coche del Leiraparking por culpa de ___.");
+const H1 = ["Un dashboard que nadie va a abrir.", "El caballo del Leiraparking.", "Un mock de un mock de un mock.", "La VPN del cliente.", "Un correo de Recursos Humanos con 14 adjuntos."].map(wi);
+const S1 = [["María", wi("Un consorcio de 23 socios de 14 países.")], ["Jorge", wi("El caballo del Leiraparking.")], ["Jesús", wi("Un test flaky que solo pasa los lunes.")]];
+const B2 = bi("Hemos entrenado el modelo con ___ y ahora solo sabe hablar de ___.");
+const H2 = ["El himno del Oviedo a todo volumen.", "Un perfil C revisando el Excel celda por celda.", "Una carta Pokémon holográfica de primera edición.", "El café de la ofi.", "Un algoritmo que es básicamente un if."].map(wi);
+const B3 = bi("Diego no puede reunirse. Motivo: ___.");
+const H3 = ["Un pentest dos días antes de salir a producción.", "El jueves de oficina.", "Una factura a 120 días."].map(wi);
+const S3 = [["Jorge", wi("Una formación obligatoria de cuatro horas en vídeo.")], ["Jesús", -1], ["Vane", wi("Un perfil D en una reunión de seguimiento.")]];
 const dTxt = id => (id < 0 ? t("demoV3") : W(id));
 function dCard(text, o){ o = o || {}; return `<div class="card white${o.sel ? " is-sel" : ""}${o.pop ? " pop" : ""}" style="--d:${o.d || 0}ms">${esc(text)}${o.badge ? `<span class="badge">${o.badge}</span>` : ""}${o.tap ? '<span class="tap"></span>' : ""}<span class="foot"><span>CcC</span></span></div>`; }
 function dFill(bk, answers, o){ o = o || {}; return `<div class="card white${o.stamp ? " wincard" : ""}${o.sel ? " is-sel" : ""}${o.pop ? " pop" : ""}" style="--d:${o.d || 0}ms">${fillHTML(BLACK[bk], answers)}${o.who ? `<span class="who">${avHTML(dp(o.who), "xs")}${esc(o.who)}</span>` : ""}${o.stamp ? `<span class="stamp">${esc(t("stamp"))}</span>` : ""}${o.tap ? '<span class="tap"></span>' : ""}</div>`; }
@@ -1865,8 +1891,8 @@ const DEMO = [
   { cap: "d1", dur: 3400, html: () => `<div class="pop"><div class="card black bigblack"><p class="wordmark">${t("wordmark")}</p><span class="foot"><span>${esc(t("demoTitle"))}</span><span>${esc(t("demoTo3"))}</span></span></div></div>` },
   { cap: "d2", dur: 4400, html: () => `<div class="codebox"><span class="label">${esc(t("codeLabel"))}</span><div class="code">${"DEMO".split("").map(c => `<span>${c}</span>`).join("")}</div></div><ul class="pchips">${DP.map((n, i) => `<li class="pop" style="--d:${300 + i * 450}ms">${avHTML(dp(n))}${esc(n)}${i === 0 ? ` <span class="tag">${esc(t("hostF"))}</span>` : ""}</li>`).join("")}</ul><p class="hint pop" style="--d:2300ms">${esc(t("demoPlays3"))}</p>` },
   { cap: "d3", dur: 3800, html: () => dRound(1, "Vane") + `<div class="pop">${blackCard(BLACK[B1], true)}</div>` },
-  { cap: "d4", dur: 4000, html: () => dWho(t("demoScreen", { n: "María" })) + blackCard(BLACK[B1], false) + `<div class="hand demo-hand">${H1.map((id, i) => dCard(W(id), { pop: true, d: i * 120 })).join("")}</div>` },
-  { cap: "d5", dur: 4600, html: () => dWho(t("demoScreen", { n: "María" })) + `<div class="hand demo-hand">${H1.map((id, i) => dCard(W(id), { sel: i === 2, tap: i === 2 })).join("")}</div><div class="preview pop" style="--d:700ms"><span class="label">${esc(t("readAsF"))}</span>${dFill(B1, [W(H1[2])])}</div>` + dBtn(t("sendToClientF"), 1600) },
+  { cap: "d4", dur: 4000, html: () => dWho(t("demoScreen", { n: "Jorge" })) + blackCard(BLACK[B1], false) + `<div class="hand demo-hand">${H1.map((id, i) => dCard(W(id), { pop: true, d: i * 120 })).join("")}</div>` },
+  { cap: "d5", dur: 4600, html: () => dWho(t("demoScreen", { n: "Jorge" })) + `<div class="hand demo-hand">${H1.map((id, i) => dCard(W(id), { sel: i === 1, tap: i === 1 })).join("")}</div><div class="preview pop" style="--d:700ms"><span class="label">${esc(t("readAsF"))}</span>${dFill(B1, [W(H1[1])])}</div>` + dBtn(t("sendToClientF"), 1600) },
   { cap: "d6", dur: 3800, html: () => dRound(1, "Vane") + `<ul class="demo-ticks">${["Jorge", "María", "Jesús"].map((n, i) => `<li class="pop" style="--d:${i * 700}ms">${avHTML(dp(n))}${esc(n)}<span class="ok">${esc(t("propSent"))}</span></li>`).join("")}</ul>` },
   { cap: "d7", dur: 7800, html: () => dWho(t("demoScreenClientF", { n: "Vane" })) + blackCard(BLACK[B1], false) + `<p class="pr-ask" id="demoRead"></p><div class="read-prog" id="demoReadProg">${S1.map(() => "<span></span>").join("")}</div><div id="demoReadCard"></div><div><span class="btn big" id="demoReadBtn"></span></div>`,
     after(){
@@ -1885,14 +1911,14 @@ const DEMO = [
       clearInterval(D.typeT); show(); D.typeT = setInterval(show, 2500);
     } },
   { cap: "d8", dur: 3200, html: () => dWho(t("demoScreenClientF", { n: "Vane" })) + `<div class="subs">${S1.map((s, i) => dFill(B1, [W(s[1])], { sel: i === 1, tap: i === 1 })).join("")}</div>` + dBtn(t("signBtn"), 900) },
-  { cap: "d9", dur: 5600, html: () => `<div class="winner">${dFill(B1, [W(S1[1][1])], { stamp: true })}${dWin("María")}</div><div class="subs">${[S1[0], S1[2]].map((s, i) => dFill(B1, [W(s[1])], { pop: true, d: 700 + i * 300 })).join("")}</div>` + dBoard({ "María": 1 }, "María") },
-  { cap: "d10", dur: 5600, html: () => dRound(2, "Jorge") + dWho(t("demoScreen", { n: "Jesús" })) + blackCard(BLACK[B2], false) + `<div class="hand demo-hand">${H2.map((id, i) => dCard(W(id), { sel: i === 0 || i === 2, badge: i === 0 ? 1 : (i === 2 ? 2 : 0), tap: i === 2 })).join("")}</div><div class="preview pop" style="--d:900ms"><span class="label">${esc(t("readAs"))}</span>${dFill(B2, [W(H2[0]), W(H2[2])])}</div>` },
-  { cap: "d11", dur: 4400, html: () => dRound(2, "Jorge") + `<div class="winner">${dFill(B2, [W(H2[0]), W(H2[2])], { stamp: true })}${dWin("Jesús")}</div>` + dBoard({ "María": 1, "Jesús": 1 }, "Jesús") },
-  { cap: "d12", dur: 6200, html: () => dRound(3, "María") + dWho(t("demoScreen", { n: "Vane" })) + blackCard(BLACK[B3], false) + `<div class="hand demo-hand"><div class="card blankcard is-sel">${esc(t("blankCard"))}<small>${esc(t("blankOwn"))}</small><span class="tap"></span></div>${H3.map(id => dCard(W(id))).join("")}</div><div class="blankbox"><span class="label">${esc(t("blankLabel"))}</span><div class="demo-input"><span id="demoType"></span><span class="caret"></span></div></div>`,
+  { cap: "d9", dur: 5600, html: () => `<div class="winner">${dFill(B1, [W(S1[1][1])], { stamp: true })}${dWin("Jorge")}</div><div class="subs">${[S1[0], S1[2]].map((s, i) => dFill(B1, [W(s[1])], { pop: true, d: 700 + i * 300 })).join("")}</div>` + dBoard({ "Jorge": 1 }, "Jorge") },
+  { cap: "d10", dur: 5600, html: () => dRound(2, "Jorge") + dWho(t("demoScreen", { n: "María" })) + blackCard(BLACK[B2], false) + `<div class="hand demo-hand">${H2.map((id, i) => dCard(W(id), { sel: i === 0 || i === 2, badge: i === 0 ? 1 : (i === 2 ? 2 : 0), tap: i === 2 })).join("")}</div><div class="preview pop" style="--d:900ms"><span class="label">${esc(t("readAs"))}</span>${dFill(B2, [W(H2[0]), W(H2[2])])}</div>` },
+  { cap: "d11", dur: 4400, html: () => dRound(2, "Jorge") + `<div class="winner">${dFill(B2, [W(H2[0]), W(H2[2])], { stamp: true })}${dWin("María")}</div>` + dBoard({ "Jorge": 1, "María": 1 }, "María") },
+  { cap: "d12", dur: 6200, html: () => dRound(3, "María") + dWho(t("demoScreen", { n: "Jesús" })) + blackCard(BLACK[B3], false) + `<div class="hand demo-hand"><div class="card blankcard is-sel">${esc(t("blankCard"))}<small>${esc(t("blankOwn"))}</small><span class="tap"></span></div>${H3.map(id => dCard(W(id))).join("")}</div><div class="blankbox"><span class="label">${esc(t("blankLabel"))}</span><div class="demo-input"><span id="demoType"></span><span class="caret"></span></div></div>`,
     after: () => typeInto("#demoType", t("demoV3")) },
-  { cap: "d13", dur: 4800, html: () => dRound(3, "María") + `<div class="winner">${dFill(B3, [t("demoV3")], { stamp: true })}${dWin("Vane")}</div><div class="subs">${[S3[0], S3[2]].map((s, i) => dFill(B3, [dTxt(s[1])], { pop: true, d: 700 + i * 300 })).join("")}</div>` + dBoard({ "María": 1, "Jesús": 1, "Vane": 1 }, "Vane") },
-  { cap: "d14", dur: 4200, html: () => `<p class="demo-skip pop">${esc(t("demoSkip"))}</p>` + dBoard({ "María": 3, "Jesús": 2, "Vane": 1, "Jorge": 1 }, "María") },
-  { cap: "d15", dur: 0, html: () => `<div class="card black bigblack pop"><div class="champ-av">${avHTML(dp("María"), "xl")}</div><p class="eyebrow" style="color:inherit;opacity:.6">${esc(t("contractClosed"))}</p><p class="champ" style="margin-top:10px">${esc(t("gameWon", { n: "María" }))}</p><p style="margin-top:8px;font-weight:600;font-size:18px">${esc(tn("withPts", 3))}</p><span class="foot"><span>${esc(t("brand"))}</span><span>${esc(tn("rounds", 6))}</span></span></div>` + dBoard({ "María": 3, "Jesús": 2, "Vane": 1, "Jorge": 1 }) },
+  { cap: "d13", dur: 4800, html: () => dRound(3, "María") + `<div class="winner">${dFill(B3, [t("demoV3")], { stamp: true })}${dWin("Jesús")}</div><div class="subs">${[S3[0], S3[2]].map((s, i) => dFill(B3, [dTxt(s[1])], { pop: true, d: 700 + i * 300 })).join("")}</div>` + dBoard({ "Jorge": 1, "María": 1, "Jesús": 1 }, "Jesús") },
+  { cap: "d14", dur: 4200, html: () => `<p class="demo-skip pop">${esc(t("demoSkip"))}</p>` + dBoard({ "Jorge": 3, "María": 2, "Jesús": 1, "Vane": 1 }, "Jorge") },
+  { cap: "d15", dur: 0, html: () => `<div class="card black bigblack pop"><div class="champ-av">${avHTML(dp("Jorge"), "xl")}</div><p class="eyebrow" style="color:inherit;opacity:.6">${esc(t("contractClosed"))}</p><p class="champ" style="margin-top:10px">${esc(t("gameWon", { n: "Jorge" }))}</p><p style="margin-top:8px;font-weight:600;font-size:18px">${esc(tn("withPts", 3))}</p><span class="foot"><span>${esc(t("brand"))}</span><span>${esc(tn("rounds", 6))}</span></span></div>` + dBoard({ "Jorge": 3, "María": 2, "Jesús": 1, "Vane": 1 }) },
 ];
 const D = { i: 0, playing: true, t: 0, typeT: 0, startedAt: 0, remaining: 0 };
 const reducedMotion = () => { try { return window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return false; } };
