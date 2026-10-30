@@ -395,6 +395,7 @@ button.fb-opt:hover{outline:2px solid var(--accent);outline-offset:2px}
       </ol>
       <p data-i18n-html="ruleBlank"></p>
       <p data-i18n-html="ruleRemo"></p>
+      <p data-i18n-html="ruleOwnBlack"></p>
     </details>
 
     <div class="panel fb-cta">
@@ -431,6 +432,7 @@ button.fb-opt:hover{outline:2px solid var(--accent);outline-offset:2px}
               <label for="blankIn" data-i18n="blankLabel">Tu respuesta en la carta en blanco</label>
               <textarea id="blankIn" rows="2" maxlength="60" placeholder="Escribe algo que el cliente no pueda rechazar" data-i18n-ph="blankPh"></textarea>
               <span id="blankCount" class="count">0/60</span>
+              <p class="hint" data-i18n="blankShared">Las cartas en blanco se envían para valorar añadirlas al juego.</p>
             </div>
             <div id="preview" class="preview"></div>
             <div class="send-row">
@@ -449,7 +451,7 @@ button.fb-opt:hover{outline:2px solid var(--accent);outline-offset:2px}
         <ol id="board"></ol>
       </aside>
     </div>
-    <div class="game-foot"><button type="button" class="linkbtn" data-act="fb-open" data-mode="report" data-i18n="fbReportHere">Reportar una de estas cartas</button><div class="langs" role="group" aria-label="Idioma" data-langs></div></div>
+    <div class="game-foot"><button type="button" id="nbBtn" class="btn ghost sm" data-act="nb-open" hidden></button><button type="button" class="linkbtn" data-act="fb-open" data-mode="report" data-i18n="fbReportHere">Reportar una de estas cartas</button><div class="langs" role="group" aria-label="Idioma" data-langs></div></div>
   </section>
 
   <section id="demo" class="demo" hidden aria-labelledby="demoTitle">
@@ -498,6 +500,22 @@ button.fb-opt:hover{outline:2px solid var(--accent);outline-offset:2px}
     <div class="pr-last" id="prLast" hidden></div>
     <div class="pr-foot"><div class="langs" role="group" aria-label="Idioma" data-langs></div></div>
   </section>
+
+  <dialog id="nbDlg" class="fb-dlg" aria-labelledby="nbTitle">
+    <div class="fb-in">
+      <div class="fb-head">
+        <h2 id="nbTitle" data-i18n="nbTitle">Tu carta negra</h2>
+        <button type="button" class="btn ghost sm" data-act="nb-close" data-i18n="close">Cerrar</button>
+      </div>
+      <label for="nbText" class="sr-only" data-i18n="fbTextLabel">Texto de la carta</label>
+      <textarea id="nbText" rows="3" maxlength="100"></textarea>
+      <p class="hint" data-i18n="nbHint">Escribe ___ en cada hueco (uno o dos). Saldrá en una de las próximas rondas, firmada con tu nombre.</p>
+      <div id="nbPreview"></div>
+      <p id="nbErr" class="err" role="alert" hidden></p>
+      <button type="button" class="btn big" data-act="nb-send" data-i18n="nbAdd">Añadir a la partida</button>
+      <p class="hint" data-i18n="nbShared">También se envía para valorar añadirla al juego.</p>
+    </div>
+  </dialog>
 
   <dialog id="fbDlg" class="fb-dlg" aria-labelledby="fbTitle">
     <div class="fb-in">
@@ -1029,6 +1047,21 @@ const TX = {
   you: ["tú", "ti", "tu"],
   settings: ["Ajustes", "Axustes", "Definições"],
   ptsToWin: ["Puntos para ganar", "Puntos para gañar", "Pontos para ganhar"],
+  nbPer: ["Cartas negras propias por persona", "Cartas negras propias por persoa", "Cartas pretas próprias por pessoa"],
+  cfgNb0: ["No se pueden escribir cartas negras propias.", "Non se poden escribir cartas negras propias.", "Não se podem escrever cartas pretas próprias."],
+  cfgNb1: ["Cada persona puede escribir <b>1 carta negra</b> propia.", "Cada persoa pode escribir <b>1 carta negra</b> propia.", "Cada pessoa pode escrever <b>1 carta preta</b> própria."],
+  cfgNbN: ["Cada persona puede escribir <b>{n} cartas negras</b> propias.", "Cada persoa pode escribir <b>{n} cartas negras</b> propias.", "Cada pessoa pode escrever <b>{n} cartas pretas</b> próprias."],
+  nbBtn1: ["Escribir una carta negra (te queda 1)", "Escribir unha carta negra (quédache 1)", "Escrever uma carta preta (resta-te 1)"],
+  nbBtnN: ["Escribir una carta negra (te quedan {n})", "Escribir unha carta negra (quédanche {n})", "Escrever uma carta preta (restam-te {n})"],
+  nbTitle: ["Tu carta negra", "A túa carta negra", "A tua carta preta"],
+  nbHint: ["Escribe ___ en cada hueco (uno o dos). Saldrá en una de las próximas rondas, firmada con tu nombre.", "Escribe ___ en cada oco (un ou dous). Sairá nunha das próximas roldas, asinada co teu nome.", "Escreve ___ em cada espaço (um ou dois). Vai sair numa das próximas rondas, com o teu nome."],
+  nbAdd: ["Añadir a la partida", "Engadir á partida", "Juntar ao jogo"],
+  nbShared: ["También se envía para valorar añadirla al juego.", "Tamén se envía para valorar engadila ao xogo.", "Também é enviada para avaliar se entra no jogo."],
+  nbQueued: ["Tu carta negra saldrá en una de las próximas rondas.", "A túa carta negra sairá nunha das próximas roldas.", "A tua carta preta vai sair numa das próximas rondas."],
+  nbFull: ["Ya hay cartas negras esperando turno. Prueba en la siguiente ronda.", "Xa hai cartas negras agardando quenda. Proba na seguinte rolda.", "Já há cartas pretas à espera. Tenta na próxima ronda."],
+  writtenBy: ["Escrita por {n}", "Escrita por {n}", "Escrita por {n}"],
+  blankShared: ["Las cartas en blanco se envían para valorar añadirlas al juego.", "As cartas en branco envíanse para valorar engadilas ao xogo.", "As cartas em branco são enviadas para avaliar se entram no jogo."],
+  ruleOwnBlack: ["<b>Carta negra propia:</b> durante la partida puedes escribir tu propia carta negra; sale en una de las próximas rondas. Cuántas puede escribir cada persona se decide al crear la partida.", "<b>Carta negra propia:</b> durante a partida podes escribir a túa propia carta negra; sae nunha das próximas roldas. Cantas pode escribir cada persoa decídese ao crear a partida.", "<b>Carta preta própria:</b> durante o jogo podes escrever a tua própria carta preta; sai numa das próximas rondas. Quantas cada pessoa pode escrever decide-se ao criar o jogo."],
   blanksPer: ["Cartas en blanco por persona", "Cartas en branco por persoa", "Cartas em branco por pessoa"],
   cfgRO1: ["Se gana con <b>{t} puntos</b>. Cada persona tiene <b>1 carta en blanco</b>.", "Gáñase con <b>{t} puntos</b>. Cada persoa ten <b>1 carta en branco</b>.", "Ganha-se com <b>{t} pontos</b>. Cada pessoa tem <b>1 carta em branco</b>."],
   cfgRON: ["Se gana con <b>{t} puntos</b>. Cada persona tiene <b>{n} cartas en blanco</b>.", "Gáñase con <b>{t} puntos</b>. Cada persoa ten <b>{n} cartas en branco</b>.", "Ganha-se com <b>{t} pontos</b>. Cada pessoa tem <b>{n} cartas em branco</b>."],
@@ -1212,7 +1245,17 @@ function fillHTML(blk, answers){
   return out;
 }
 function answersOf(sub){ if (!sub) return []; const ids = decList(sub[0]); return ids.map(c => c === BLANK ? (sub[1] || "…") : W(c)); }
-function blackCard(blk, big){ return `<div class="card black${big ? " bigblack" : ""}"><p>${blackHTML(blk)}</p><span class="foot"><span>${esc(t("brand"))}</span>${blk.p > 1 ? `<span class="pick">${esc(t("pick2Pill"))}</span>` : ""}</span></div>`; }
+// Carta negra de la ronda: la del mazo o la que ha escrito alguien en la partida (st.cb)
+const OWN_BLACK_MAX = 100;   // caracteres de una carta negra propia
+const OWN_QUEUE_MAX = 2;     // cartas negras propias esperando turno a la vez
+const ownBlackText = s => { const x = cleanText(s, OWN_BLACK_MAX).replace(/_{2,}/g, "___"); const n = (x.match(/___/g) || []).length; return n >= 1 && n <= 2 ? x : ""; };
+function blackOf(st){
+  const cb = st.cb;
+  if (cb && typeof cb.t === "string") return { t: cb.t, p: Math.max(1, (cb.t.match(/___/g) || []).length), by: cleanText(cb.by, 16) || t("someone") };
+  return BLACK[st.bk] || BLACK[0];
+}
+const cfgOwn = st => (st.cfg.n == null ? 1 : Number(st.cfg.n) || 0);
+function blackCard(blk, big){ return `<div class="card black${big ? " bigblack" : ""}"><p>${blackHTML(blk)}</p><span class="foot"><span>${esc(blk.by ? t("writtenBy", { n: blk.by }) : t("brand"))}</span>${blk.p > 1 ? `<span class="pick">${esc(t("pick2Pill"))}</span>` : ""}</span></div>`; }
 
 /* ---------- Estado ---------- */
 const S = {
@@ -1261,7 +1304,7 @@ function advertise(){
 }
 
 /* ---------- Anfitrión ---------- */
-function newState(code){ return { v: 1, ep: 1, ver: 0, h: S.me.key, code, ph: "lobby", cfg: { t: 5, b: 2 }, hs: 10, pl: [], r: 0, cz: -1, bk: -1, ub: "", sb: {}, rv: [], w: -1, wr: 0 }; }
+function newState(code){ return { v: 1, ep: 1, ver: 0, h: S.me.key, code, ph: "lobby", cfg: { t: 5, b: 2, n: 1 }, hs: 10, pl: [], r: 0, cz: -1, bk: -1, ub: "", sb: {}, rv: [], w: -1, wr: 0 }; }
 function publish(){
   const st = S.st; st.ver++; st.h = S.me.key;
   const snap = clone(st);
@@ -1314,7 +1357,10 @@ function nextRound(st){
   const max = seats.reduce((m, i) => Math.max(m, st.pl[i].s), 0);
   if (st.r > 0 && max >= st.cfg.t) { st.ph = "end"; return; }
   for (const i of seats) refill(st, i);
-  st.r++; st.cz = nextCzar(st); st.bk = drawBlack(st); st.ph = "play"; S.czarGoneAt = 0;
+  st.r++; st.cz = nextCzar(st); st.ph = "play"; S.czarGoneAt = 0;
+  // Las cartas negras propias van antes que las del mazo, en el orden en que se escribieron
+  if (st.cq && st.cq.length) { st.cb = st.cq[0]; st.cq = st.cq.slice(1); st.bk = -1; }
+  else { st.cb = null; st.bk = drawBlack(st); }
 }
 function toJudge(st){ st.rv = shuffle(Object.keys(st.sb).map(Number)); st.rn = 1; st.ph = "judge"; S.czarGoneAt = 0; }
 // rn: propuesta que se está leyendo en voz alta (1..n), de una en una; con rn > n se ven todas para elegir.
@@ -1325,14 +1371,14 @@ function award(st, seat, random){ st.w = seat; st.wr = random ? 1 : 0; if (st.pl
 function startGame(st){
   const seats = activeSeats(st); if (seats.length < 3) return;
   st.hs = handSize(seats.length);
-  for (const i of seats) Object.assign(st.pl[i], { s: 0, g: 0, b: st.cfg.b, h: "" });
-  st.r = 0; st.cz = -1; st.ub = ""; st.sb = {}; st.rv = []; st.rn = 0; st.w = -1; st.wr = 0;
+  for (const i of seats) Object.assign(st.pl[i], { s: 0, g: 0, b: st.cfg.b, nb: cfgOwn(st), h: "" });
+  st.r = 0; st.cz = -1; st.ub = ""; st.sb = {}; st.rv = []; st.rn = 0; st.w = -1; st.wr = 0; st.cq = []; st.cb = null;
   nextRound(st);
 }
 function newGame(st){
   const present = presentKeys();
-  st.pl = st.pl.filter(p => !p.x && present.has(p.k)).map(p => ({ k: p.k, n: p.n, a: p.a || "", s: 0, b: 0, g: 0, h: "" }));
-  Object.assign(st, { ph: "lobby", r: 0, cz: -1, bk: -1, ub: "", sb: {}, rv: [], rn: 0, w: -1, wr: 0 });
+  st.pl = st.pl.filter(p => !p.x && present.has(p.k)).map(p => ({ k: p.k, n: p.n, a: p.a || "", s: 0, b: 0, g: 0, h: "", ni: p.ni || "" }));
+  Object.assign(st, { ph: "lobby", r: 0, cz: -1, bk: -1, ub: "", sb: {}, rv: [], rn: 0, w: -1, wr: 0, cq: [], cb: null });
 }
 function hostSync(){
   if (!S.isHost || !S.st || !S.nroom) return;
@@ -1345,7 +1391,7 @@ function hostSync(){
     const i = st.pl.findIndex(p => p.k === k);
     if (i < 0) {
       if (activeSeats(st).length >= MAX_PLAYERS) continue;
-      st.pl.push({ k, n: uniqueName(st, n, k), a: cleanAvatar(pr.a), s: 0, b: inGame ? st.cfg.b : 0, g: 0, h: "" });
+      st.pl.push({ k, n: uniqueName(st, n, k), a: cleanAvatar(pr.a), s: 0, b: inGame ? st.cfg.b : 0, nb: inGame ? cfgOwn(st) : 0, g: 0, h: "" });
       if (inGame) refill(st, st.pl.length - 1);
       ch = true;
     } else {
@@ -1355,8 +1401,15 @@ function hostSync(){
       const av = cleanAvatar(pr.a); if ((p.a || "") !== av) { p.a = av; ch = true; }
     }
   }
+  if (inGame) for (const i of activeSeats(st)) {
+    const p = st.pl[i]; const nb = (pres.get(p.k) || {}).nb;
+    if (!nb || typeof nb.id !== "string" || nb.id.slice(0, 8) === p.ni) continue;
+    p.ni = nb.id.slice(0, 8); ch = true;   // cada petición se atiende una vez, se acepte o no
+    const txt = ownBlackText(nb.t); const queue = st.cq || [];
+    if (txt && (p.nb || 0) > 0 && queue.length < OWN_QUEUE_MAX) { st.cq = queue.concat([{ t: txt, by: p.n }]); p.nb--; }
+  }
   if (st.ph === "play") {
-    const blk = BLACK[st.bk];
+    const blk = blackOf(st);
     for (const i of activeSeats(st)) {
       if (i === st.cz) continue;
       const p = st.pl[i]; const pr = pres.get(p.k); if (!pr) continue;
@@ -1499,7 +1552,7 @@ function canPlay(st){
 }
 function toggleCard(id){
   const st = S.st; if (!canPlay(st)) return;
-  const pick = BLACK[st.bk].p; const k = S.sel.indexOf(id);
+  const pick = blackOf(st).p; const k = S.sel.indexOf(id);
   if (k >= 0) S.sel.splice(k, 1);
   else if (pick === 1) S.sel = [id];
   else if (S.sel.length < pick) S.sel.push(id);
@@ -1509,11 +1562,43 @@ function toggleCard(id){
 }
 function sendSub(){
   const st = S.st; if (!canPlay(st)) return;
-  const pick = BLACK[st.bk].p; if (S.sel.length !== pick) return;
+  const pick = blackOf(st).p; if (S.sel.length !== pick) return;
   const txt = cleanText(S.blankText, 60);
   if (S.sel.includes(BLANK) && !txt) { toast(t("needBlank")); $("#blankIn").focus(); return; }
   setMyPres({ sub: { r: st.r, c: encList(S.sel), t: S.sel.includes(BLANK) ? txt : "" } });
+  if (S.sel.includes(BLANK)) fbQuiet({ type: "suggest", color: "white", text: txt, origin: "blank" });
   render();
+}
+function nbOpen(){
+  const st = S.st; const me = st ? mySeat(st) : -1; if (me < 0 || !(st.pl[me].nb > 0)) return;
+  $("#nbErr").hidden = true; nbRender();
+  const d = $("#nbDlg"); if (typeof d.showModal === "function") d.showModal(); else d.setAttribute("open", "");
+  setTimeout(() => $("#nbText").focus(), 30);
+}
+function nbClose(){ const d = $("#nbDlg"); if (typeof d.close === "function") d.close(); else d.removeAttribute("open"); }
+function nbRender(){
+  const txt = $("#nbText").value.trim().replace(/_{2,}/g, "___");
+  setHTML($("#nbPreview"), txt ? blackCard({ t: txt, p: Math.max(1, (txt.match(/___/g) || []).length), by: S.name }, false) : "");
+}
+function nbSend(){
+  const st = S.st; const me = st ? mySeat(st) : -1;
+  const err = m => { const e = $("#nbErr"); e.textContent = m; e.hidden = !m; };
+  if (me < 0 || !(st.pl[me].nb > 0) || st.ph === "lobby" || st.ph === "end") { nbClose(); return; }
+  const raw = $("#nbText").value.trim();
+  const txt = ownBlackText(raw);
+  if (raw.length < 3) { err(t("fbEmpty")); return; }
+  if (!txt) { err(t("fbNeedBlank")); return; }
+  if ((st.cq || []).length >= OWN_QUEUE_MAX) { err(t("nbFull")); return; }
+  setMyPres({ nb: { t: txt, id: randomId(8) } });
+  if (S.isHost) hostSync();
+  fbQuiet({ type: "suggest", color: "black", text: txt, origin: "black" });
+  $("#nbText").value = ""; nbClose(); toast(t("nbQueued"));
+}
+function renderNbBtn(st){
+  const b = $("#nbBtn"); const me = mySeat(st);
+  const left = me >= 0 && (st.ph === "play" || st.ph === "judge" || st.ph === "res") ? (st.pl[me].nb || 0) : 0;
+  b.hidden = left <= 0;
+  if (left > 0) b.textContent = tn("nbBtn", left);
 }
 function confirmPick(){ const st = S.st; if (!st || st.ph !== "judge" || mySeat(st) !== st.cz || S.pickIdx < 0 || !allShown(st)) return; setMyPres({ pick: { r: st.r, i: S.pickIdx } }); render(); if (S.isHost) hostSync(); }
 function revealNext(){
@@ -1592,6 +1677,7 @@ function render(){
   const st = S.st;
   $("#tbCode").textContent = S.code;
   $("#tbPhase").textContent = phaseLabel(st);
+  if (st) renderNbBtn(st); else $("#nbBtn").hidden = true;
   let msg = S.err ? t(S.err) : "";
   if (!msg && !st) msg = S.notFound ? t("notFound", { c: S.code }) : t("connectingRoom");
   if (!msg && S.stale) msg = t("stale");
@@ -1619,8 +1705,8 @@ function renderLobby(st){
   const host = st.pl.find(p => p.k === st.h);
   const people = seats.map(i => { const p = st.pl[i]; return `<li class="${p.k === S.me.key ? "me" : ""}">${avHTML(p)}${esc(p.n)}${p.k === st.h ? ` <span class="tag">${esc(t("host"))}</span>` : ""}${p.k === S.me.key ? youTag() : ""}</li>`; }).join("");
   const cfg = S.isHost
-    ? seg("t", [3, 5, 7, 10], st.cfg.t, t("ptsToWin")) + seg("b", [0, 1, 2, 3], st.cfg.b, t("blanksPer"))
-    : `<p>${tn("cfgRO", Number(st.cfg.b) || 0, { t: Number(st.cfg.t) || 0 })}</p>`;
+    ? seg("t", [3, 5, 7, 10], st.cfg.t, t("ptsToWin")) + seg("b", [0, 1, 2, 3], st.cfg.b, t("blanksPer")) + seg("n", [0, 1, 2], cfgOwn(st), t("nbPer"))
+    : `<p>${tn("cfgRO", Number(st.cfg.b) || 0, { t: Number(st.cfg.t) || 0 })}</p><p>${cfgOwn(st) ? tn("cfgNb", cfgOwn(st)) : t("cfgNb0")}</p>`;
   const start = S.isHost
     ? (n >= 3 ? `<button type="button" class="btn big" data-act="host" data-op="start">${esc(t("startWith", { n }))}</button>` : `<button type="button" class="btn big" disabled>${esc(tn("need", 3 - n))}</button>`)
     : `<p class="status"><span class="big">${esc(t("waitHost", { h: host ? host.n : t("theHost") }))}</span></p>`;
@@ -1640,7 +1726,7 @@ function pendingNames(st){
   return activeSeats(st).filter(i => i !== st.cz && !st.sb[i] && present.has(st.pl[i].k)).map(i => st.pl[i].n);
 }
 function renderPlay(st){
-  const me = mySeat(st); const blk = BLACK[st.bk] || BLACK[0];
+  const me = mySeat(st); const blk = blackOf(st);
   setHTML($("#stage"), clientLine(st, me) + blackCard(blk, true));
   const nsub = Object.keys(st.sb).length;
   const pend = pendingNames(st);
@@ -1672,7 +1758,7 @@ function renderPlay(st){
 }
 function renderPreview(){
   const st = S.st; if (!st || st.ph !== "play") return;
-  const blk = BLACK[st.bk] || BLACK[0];
+  const blk = blackOf(st);
   const answers = S.sel.map(id => id === BLANK ? cleanText(S.blankText, 60) : W(id));
   setHTML($("#preview"), S.sel.length ? `<span class="label">${esc(t("readAs"))}</span><div class="card white">${fillHTML(blk, answers)}</div>` : "");
   const ready = S.sel.length === blk.p && (!S.sel.includes(BLANK) || !!cleanText(S.blankText, 60));
@@ -1680,7 +1766,7 @@ function renderPreview(){
   $("#blankCount").textContent = (S.blankText || "").length + "/60";
 }
 function renderJudge(st){
-  const me = mySeat(st); const blk = BLACK[st.bk] || BLACK[0]; const cz = st.pl[st.cz];
+  const me = mySeat(st); const blk = blackOf(st); const cz = st.pl[st.cz];
   const isCz = me === st.cz && me >= 0;
   if (!allShown(st)) {
     // Lectura: una propuesta cada vez; el cliente pasa a la siguiente cuando la ha leído
@@ -1701,7 +1787,7 @@ function renderJudge(st){
   setHTML($("#judgeV"), `<div>${clientLine(st, me)}${blackCard(blk, true)}</div><div class="status">${head}</div><ul class="subs">${list}</ul>${btn}`);
 }
 function renderRes(st){
-  const blk = BLACK[st.bk] || BLACK[0]; const w = st.pl[st.w];
+  const blk = blackOf(st); const w = st.pl[st.w];
   // Solo se descubre quién escribió la propuesta firmada; las demás siguen siendo anónimas
   const others = st.rv.filter(s => s !== st.w).map(seat => `<li><div class="card white">${fillHTML(blk, answersOf(st.sb[seat]))}</div></li>`).join("");
   setHTML($("#resV"), `
@@ -1915,10 +2001,10 @@ const fbAll = () => [...BLACK.map((b, i) => fbRef("black", i)), ...prWhiteIds().
 // Las cartas que hay en pantalla (modo prueba o partida) para reportarlas sin buscarlas
 function fbContext(){
   if (!$("#practice").hidden && BLACK[PR.bk]) return [fbRef("black", PR.bk), ...PR.hand.map(id => fbRef("white", id))];
-  const st = S.st; if (!S.nroom || !st || !BLACK[st.bk]) return [];
+  const st = S.st; if (!S.nroom || !st || st.ph === "lobby") return [];
   const me = mySeat(st);
   const hand = me >= 0 ? handOf(st, me).filter(id => id >= 0 && id < WCOUNT) : [];
-  return [fbRef("black", st.bk), ...hand.map(id => fbRef("white", id))];
+  return [...(!st.cb && BLACK[st.bk] ? [fbRef("black", st.bk)] : []), ...hand.map(id => fbRef("white", id))];
 }
 function fbOptHTML(c, k){
   const cls = "fb-opt " + (c.color === "black" ? "b" : "w");
@@ -1948,6 +2034,10 @@ function fbRender(){
     setHTML($("#fbResults"), head + FB.list.map((c, k) => fbOptHTML(c, k)).join(""));
   }
   setHTML($("#fbReasons"), FB_REASONS.map(r => `<button type="button" data-act="fb-reason" data-r="${r}" aria-pressed="${r === FB.reason}">${esc(t("fbR_" + r))}</button>`).join(""));
+}
+// Envía una carta escrita en la partida para valorarla; si el buzón no está activado, no pasa nada
+function fbQuiet(body){
+  try { fetch("api/feedback", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(Object.assign({ name: S.name || "", lang: LANG, hp: "" }, body)) }).catch(() => {}); } catch (e) {}
 }
 function fbError(msg){ const e = $("#fbErr"); e.textContent = msg; e.hidden = !msg; }
 function fbOpen(mode){
@@ -2021,6 +2111,7 @@ function bind(){
   $("#remoBtn").addEventListener("click", remo);
   $("#fbText").addEventListener("input", () => { fbError(""); fbRender(); });
   $("#fbSearch").addEventListener("input", fbRender);
+  $("#nbText").addEventListener("input", () => { $("#nbErr").hidden = true; nbRender(); });
   $("#blankIn").addEventListener("input", e => { S.blankText = e.target.value.slice(0, 60); renderPreview(); });
   document.addEventListener("click", e => {
     const el = e.target.closest("[data-act]"); if (!el || el.disabled) return;
@@ -2033,6 +2124,9 @@ function bind(){
     else if (a === "pick") { if (S.st && mySeat() === S.st.cz) { S.pickIdx = Number(el.dataset.i); render(); } }
     else if (a === "confirm") confirmPick();
     else if (a === "reveal") revealNext();
+    else if (a === "nb-open") nbOpen();
+    else if (a === "nb-close") nbClose();
+    else if (a === "nb-send") nbSend();
     else if (a === "unsend") { setMyPres({ sub: null }); render(); }
     else if (a === "host") hostDo(el.dataset.op);
     else if (a === "cfg") hostDo("cfg", { k: el.dataset.k, v: Number(el.dataset.v) });

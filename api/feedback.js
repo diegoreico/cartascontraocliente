@@ -9,10 +9,12 @@
 const REPO = process.env.FEEDBACK_REPO || "diegoreico/cartascontraocliente";
 const API = process.env.GITHUB_API_URL || "https://api.github.com";
 const MAX_BODY = 8192;
-const MAX_PER_IP = 10;             // envíos por IP cada 10 minutos (por instancia)
+const MAX_PER_IP = 30;             // envíos por IP cada 10 minutos (por instancia); en una oficina todos comparten IP
 const LANGS = { es: "español", gl: "gallego", pt: "portugués" };
 const REASONS = { nonsense: "No tiene sentido", dislike: "No me gusta", translation: "Traducción rara", other: "Otro motivo" };
 const LISTS = ["BLACK_T", "WHITE_T", "NAMES"];
+// Cartas escritas durante una partida, que el juego envía solo
+const ORIGINS = { blank: "carta en blanco jugada en una partida", black: "carta negra propia creada en una partida" };
 
 const hits = new Map();
 function limited(ip){
@@ -44,10 +46,12 @@ function build(m){
     const blanks = (text.match(/___/g) || []).length;
     if (text.length < 3) return null;
     if (color === "black" ? blanks < 1 || blanks > 2 : blanks > 0) return null;
+    const origin = ORIGINS[m.origin] ? m.origin : null;
+    if (origin) meta.push(`**Origen:** ${ORIGINS[origin]}`);
     return {
       title: quiet(`Sugerencia de carta ${colorName(color)}: ${short(text)}`),
       body: [...meta, "", quote(text), "", "---", "Para aprobarla, ponle la etiqueta `aprobada`."].join("\n"),
-      labels: ["sugerencia", ...labels],
+      labels: ["sugerencia", ...labels, ...(origin ? ["desde-partida"] : [])],
     };
   }
   if (m.type === "report") {

@@ -83,6 +83,8 @@ Cada envío se convierte en un **issue de GitHub** en este repositorio, con etiq
 - `sugerencia` o `reporte`
 - `carta-negra` o `carta-blanca`
 
+- `desde-partida`, si la carta se escribió jugando: las respuestas de **carta en blanco** y las **cartas negras propias** se envían solas para valorarlas.
+
 Los reportes indican la carta exacta (por ejemplo `WHITE_T[42]`), el idioma en que se vio y el motivo. Para aprobar una sugerencia, ponle la etiqueta `aprobada`; después hay que añadirla a `public/index.html` con sus tres idiomas.
 
 Quien envía no necesita cuenta de GitHub. Lo recibe `api/feedback.js`: en Vercel es una función (`/api/feedback`) y `server.js` la sirve en la misma ruta. Tiene un campo trampa contra bots, un límite de 10 envíos por persona cada 10 minutos y quita las menciones (`@usuario`) para que nadie reciba avisos.
@@ -98,6 +100,10 @@ Variables opcionales: `FEEDBACK_REPO` (`dueño/repo` donde crear los issues, por
 Sin `GITHUB_TOKEN` (o en GitHub Pages, que no ejecuta funciones) el formulario se ve igual, pero avisa de que el buzón no está activado.
 
 Ojo: si el repositorio es público, las sugerencias y reportes también lo son.
+
+## Cartas negras propias
+
+Durante la partida, cada persona puede escribir su propia carta negra (botón "Escribir una carta negra", abajo del todo). Sale en la siguiente ronda en lugar de una del mazo, con "Escrita por …" en la carta. Cuántas puede escribir cada persona se elige en la sala de espera (0, 1 o 2; por defecto 1), y como mucho puede haber 2 esperando turno a la vez. Son textos libres de hasta 100 caracteres con uno o dos huecos `___`, y no se traducen.
 
 ## Qué pasa si algo se cae
 
