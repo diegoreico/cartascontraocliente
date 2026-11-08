@@ -12,7 +12,7 @@ const MAX_BODY = 8192;
 const MAX_PER_IP = 30;             // envíos por IP cada 10 minutos (por instancia); en una oficina todos comparten IP
 const LANGS = { es: "español", gl: "gallego", pt: "portugués" };
 const REASONS = { nonsense: "No tiene sentido", dislike: "No me gusta", translation: "Traducción rara", other: "Otro motivo" };
-const LISTS = ["BLACK_T", "WHITE_T", "NAMES"];
+const LISTS = ["BLACK_T", "WHITE_T", "NAMES", "CAH_BLACK_T", "CAH_WHITE_T"];
 // Cartas escritas durante una partida, que el juego envía solo
 const ORIGINS = { blank: "carta en blanco jugada en una partida", black: "carta negra propia creada en una partida" };
 
