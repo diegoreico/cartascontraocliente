@@ -117,6 +117,16 @@ Las cartas están en `public/index.html`, en las listas `BLACK_T` (negras) y `WH
 
 Si cambias el número o el orden de las cartas, hazlo con ninguna partida en marcha: los jugadores se pasan las cartas por su posición en la lista.
 
+
+## Barajas
+
+Una partida puede usar una o varias barajas. El anfitrión las elige en la sala de espera (por defecto, solo "Equipo"), y en el modo prueba cada persona elige las suyas. Las barajas disponibles:
+
+- **Equipo** (`BLACK_T`, `WHITE_T` y los nombres de `NAMES`): las cartas del equipo.
+- **Cartas contra la Humanidad** (`CAH_BLACK_T`, `CAH_WHITE_T`): una selección del juego original [Cards Against Humanity](https://cardsagainsthumanity.com), traducida y adaptada al español, gallego y portugués. El original se distribuye con licencia [CC BY-NC-SA 2.0](https://creativecommons.org/licenses/by-nc-sa/2.0/): se puede usar sin fines comerciales, citando la fuente y compartiendo las adaptaciones con la misma licencia. Esta adaptación se distribuye con esa misma licencia.
+
+Para añadir una baraja, crea sus dos listas (negras y blancas, con las tres traducciones como el resto) y añade una entrada **al final** de `PACKS`, junto con sus textos `pk_<id>` y `pkd_<id>`. Los ids de las cartas son posiciones en las listas combinadas, así que las barajas y las cartas nuevas siempre van al final y no conviene cambiarlas con partidas en marcha.
+
 ## Seguridad
 
 No hay usuarios ni contraseñas: cualquiera que llegue a la dirección puede ver las salas abiertas y entrar con un código. Si lo desplegáis en Internet, ponedlo detrás de vuestra VPN o de vuestro SSO.

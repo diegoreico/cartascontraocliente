@@ -488,6 +488,7 @@ button.fb-opt:hover{outline:2px solid var(--accent);outline-offset:2px}
       <div class="tb-right"><button type="button" class="btn ghost sm" data-act="pr-close" data-i18n="close">Cerrar</button></div>
     </header>
     <p class="hint" data-i18n="prHint">Juega solo para conocer las cartas. Con cada respuesta salen una carta negra y una mano nuevas.</p>
+    <div id="prPacks"></div>
     <div id="prBlack"></div>
     <p class="pr-ask" id="prAsk"></p>
     <div class="hand" id="prHand"></div>
@@ -1046,6 +1047,11 @@ const TX = {
   host: ["anfitrión", "anfitrión", "anfitrião"],
   you: ["tú", "ti", "tu"],
   settings: ["Ajustes", "Axustes", "Definições"],
+  packsLabel: ["Barajas", "Barallas", "Baralhos"],
+  pk_eq: ["Equipo", "Equipo", "Equipa"],
+  pk_cch: ["Cartas contra la Humanidad", "Cartas contra a Humanidade", "Cartas contra a Humanidade"],
+  pkd_eq: ["Equipo: las cartas del equipo de AI & Data Ops.", "Equipo: as cartas do equipo de AI & Data Ops.", "Equipa: as cartas da equipa de AI & Data Ops."],
+  pkd_cch: ["Cartas contra la Humanidad: selección del juego original Cards Against Humanity, traducida (licencia CC BY-NC-SA 2.0). Humor más bruto.", "Cartas contra a Humanidade: selección do xogo orixinal Cards Against Humanity, traducida (licenza CC BY-NC-SA 2.0). Humor máis bruto.", "Cartas contra a Humanidade: seleção do jogo original Cards Against Humanity, traduzida (licença CC BY-NC-SA 2.0). Humor mais bruto."],
   ptsToWin: ["Puntos para ganar", "Puntos para gañar", "Pontos para ganhar"],
   nbPer: ["Cartas negras propias por persona", "Cartas negras propias por persoa", "Cartas pretas próprias por pessoa"],
   cfgNb0: ["No se pueden escribir cartas negras propias.", "Non se poden escribir cartas negras propias.", "Não se podem escrever cartas pretas próprias."],
@@ -1160,17 +1166,196 @@ const TX = {
 function t(k, p){ const row = TX[k]; let s = row ? (row[li()] || row[0]) : k; if (p) s = s.replace(/\{(\w+)\}/g, (m, x) => (p[x] != null ? String(p[x]) : m)); return s; }
 const tn = (k, n, p) => t(k + (n === 1 ? "1" : "N"), Object.assign({ n }, p || {}));
 
-/* ---------- Mazo derivado ---------- */
-const NW = NAMES.length * 2;            // los nombres van dos veces para que salgan a menudo
-const WCOUNT = NW + WHITE_T.length;
-function W(id){ if (id < NW) return NAMES[id % NAMES.length] + "."; const r = WHITE_T[id - NW]; return r ? (r[li()] || r[0]) : ""; }
-const BLACK = BLACK_T.map(r => ({ r, p: Math.max(1, (r[0].match(/___/g) || []).length), get t(){ return r[li()] || r[0]; } }));
+// Baraja "Cartas contra la Humanidad": selección de cartas del juego original Cards Against Humanity
+// (cardsagainsthumanity.com, licencia CC BY-NC-SA 2.0), traducidas y adaptadas al español, gallego y portugués.
+// Esta adaptación se distribuye con la misma licencia. Añade cartas siempre al final de cada lista.
+const CAH_BLACK_T = [
+["¿Por qué no puedo dormir por las noches? ___.", "Por que non podo durmir polas noites? ___.", "Porque é que não consigo dormir à noite? ___."],
+["¿Qué es ese olor? ___.", "Que é ese cheiro? ___.", "Que cheiro é este? ___."],
+["Tengo 99 problemas, pero ___ no es uno de ellos.", "Teño 99 problemas, pero ___ non é un deles.", "Tenho 99 problemas, mas ___ não é um deles."],
+["Quizá nació así. Quizá sea ___.", "Quizais naceu así. Quizais sexa ___.", "Talvez tenha nascido assim. Talvez seja ___."],
+["Unos antropólogos han descubierto una tribu primitiva que venera ___.", "Uns antropólogos descubriron unha tribo primitiva que venera ___.", "Uns antropólogos descobriram uma tribo primitiva que venera ___."],
+["Es una pena que los chavales de hoy anden metidos en ___.", "É unha mágoa que os rapaces de hoxe anden metidos en ___.", "É uma pena que os miúdos de hoje andem metidos em ___."],
+["Durante su olvidado periodo marrón, Picasso pintó cientos de cuadros de ___.", "Durante o seu esquecido período marrón, Picasso pintou centos de cadros de ___.", "Durante o seu esquecido período castanho, Picasso pintou centenas de quadros de ___."],
+["La medicina alternativa defiende ahora el poder curativo de ___.", "A medicina alternativa defende agora o poder curativo de ___.", "A medicina alternativa defende agora o poder curativo de ___."],
+["¿Qué acabó con mi última relación? ___.", "Que acabou coa miña última relación? ___.", "O que acabou com a minha última relação? ___."],
+["¿Cuál es la nueva dieta de moda? ___.", "Cal é a nova dieta de moda? ___.", "Qual é a nova dieta da moda? ___."],
+["¿Cuál es mi superpoder secreto? ___.", "Cal é o meu superpoder secreto? ___.", "Qual é o meu superpoder secreto? ___."],
+["¿Cuál es el placer culpable de Batman? ___.", "Cal é o pracer culpable de Batman? ___.", "Qual é o prazer culpado do Batman? ___."],
+["¿Qué le parecería a la abuela inquietante, pero extrañamente encantador? ___.", "Que lle parecería á avoa inquietante, pero estrañamente encantador? ___.", "O que é que a avó acharia perturbador, mas estranhamente encantador? ___."],
+["Las nuevas normas de seguridad prohíben llevar ___ en los aviones.", "As novas normas de seguridade prohiben levar ___ nos avións.", "As novas regras de segurança proíbem levar ___ nos aviões."],
+["Cuando sea presidente, crearé el Ministerio de ___.", "Cando sexa presidente, crearei o Ministerio de ___.", "Quando for presidente, vou criar o Ministério de ___."],
+["¿Qué nunca falla para animar una fiesta? ___.", "Que nunca falla para animar unha festa? ___.", "O que nunca falha para animar uma festa? ___."],
+["¡La guerra! ¿Para qué sirve? ___.", "A guerra! Para que serve? ___.", "A guerra! Para que serve? ___."],
+["Esta temporada llega a la Gran Vía ___: el musical.", "Esta tempada chega aos escenarios ___: o musical.", "Esta temporada chega aos palcos ___: o musical."],
+["¿Qué es lo más emo del mundo? ___.", "Que é o máis emo do mundo? ___.", "O que é a coisa mais emo do mundo? ___."],
+["En vez de carbón, Papá Noel ahora les deja a los niños malos ___.", "En vez de carbón, o Papá Noel agora déixalles aos nenos malos ___.", "Em vez de carvão, o Pai Natal agora deixa aos meninos maus ___."],
+["Bebo para olvidar ___.", "Bebo para esquecer ___.", "Bebo para esquecer ___."],
+["___. Así es como quiero morir.", "___. Así é como quero morrer.", "___. É assim que quero morrer."],
+["Según los estudios, las ratas de laboratorio recorren los laberintos un 50% más rápido tras exponerse a ___.", "Segundo os estudos, as ratas de laboratorio percorren os labirintos un 50 % máis rápido tras exporse a ___.", "Segundo os estudos, os ratos de laboratório percorrem os labirintos 50% mais depressa depois de expostos a ___."],
+["¿Qué mejora con los años? ___.", "Que mellora cos anos? ___.", "O que é que melhora com a idade? ___."],
+["¿Qué me llevaría al pasado para convencer a todos de que soy un mago poderoso? ___.", "Que levaría ao pasado para convencer a todos de que son un mago poderoso? ___.", "O que levaria para o passado para convencer toda a gente de que sou um mago poderoso? ___."],
+["La excursión del colegio quedó arruinada por culpa de ___.", "A excursión do colexio quedou arruinada por culpa de ___.", "A visita de estudo ficou arruinada por culpa de ___."],
+["Paso 1: ___. Paso 2: ___. Paso 3: beneficios.", "Paso 1: ___. Paso 2: ___. Paso 3: beneficios.", "Passo 1: ___. Passo 2: ___. Passo 3: lucro."],
+["Y el Óscar a ___ es para ___.", "E o Óscar a ___ é para ___.", "E o Óscar para ___ vai para ___."],
+["Para mi próximo truco, sacaré ___ de ___.", "Para o meu seguinte truco, sacarei ___ de ___.", "Para o meu próximo truque, vou tirar ___ de ___."],
+["Pero antes de matarle, señor Bond, debo enseñarle ___.", "Pero antes de matalo, señor Bond, debo amosarlle ___.", "Mas antes de o matar, Sr. Bond, tenho de lhe mostrar ___."],
+["Cuando esté en la cárcel, me pasarán ___ a escondidas.", "Cando estea no cárcere, pasaranme ___ ás agochadas.", "Quando estiver na prisão, vão passar-me ___ às escondidas."],
+["Lo próximo de J. K. Rowling: Harry Potter y la cámara de ___.", "O próximo de J. K. Rowling: Harry Potter e a cámara de ___.", "O próximo livro de J. K. Rowling: Harry Potter e a Câmara de ___."],
+["¿A qué voy a renunciar en Cuaresma? ___.", "A que vou renunciar na Coresma? ___.", "Do que vou abdicar na Quaresma? ___."],
+["Querida consultora sentimental: tengo problemas con ___ y necesito tu consejo.", "Querida consultora sentimental: teño problemas con ___ e preciso o teu consello.", "Querida conselheira sentimental: tenho problemas com ___ e preciso do teu conselho."],
+["Nunca entendí de verdad ___ hasta que descubrí ___.", "Nunca entendín de verdade ___ ata que descubrín ___.", "Nunca percebi realmente ___ até descobrir ___."],
+["La nueva pareja de superhéroe y ayudante: ___ y ___.", "A nova parella de superheroe e axudante: ___ e ___.", "A nova dupla de super-herói e ajudante: ___ e ___."]
+];
+const CAH_WHITE_T = [
+["Un molino lleno de cadáveres.", "Un muíño cheo de cadáveres.", "Um moinho cheio de cadáveres."],
+["¿Abejas?", "Abellas?", "Abelhas?"],
+["Estar en llamas.", "Estar en chamas.", "Estar a arder."],
+["Una pistola de agua llena de pis de gato.", "Unha pistola de auga chea de mexo de gato.", "Uma pistola de água cheia de xixi de gato."],
+["Tom Cruise.", "Tom Cruise.", "Tom Cruise."],
+["La abuela.", "A avoa.", "A avó."],
+["¡Cachorritos!", "Cadeliños!", "Cachorrinhos!"],
+["Piratas.", "Piratas.", "Piratas."],
+["Vikingos.", "Viquingos.", "Vikings."],
+["Morirse.", "Morrer.", "Morrer."],
+["El Big Bang.", "O Big Bang.", "O Big Bang."],
+["La ciencia.", "A ciencia.", "A ciência."],
+["Kanye West.", "Kanye West.", "Kanye West."],
+["Sean Connery.", "Sean Connery.", "Sean Connery."],
+["Una fiesta de cumpleaños decepcionante.", "Unha festa de aniversario decepcionante.", "Uma festa de anos dececionante."],
+["Ataques de velocirraptor.", "Ataques de velocirraptor.", "Ataques de velociraptor."],
+["Peleas de almohadas sexis.", "Pelexas de almofadas sexis.", "Lutas de almofadas sensuais."],
+["El corazón de un niño.", "O corazón dun neno.", "O coração de uma criança."],
+["Una nevera llena de órganos.", "Unha neveira chea de órganos.", "Uma geleira cheia de órgãos."],
+["Compensar en exceso.", "Compensar en exceso.", "Compensar em excesso."],
+["Un complejo de Edipo.", "Un complexo de Edipo.", "Um complexo de Édipo."],
+["Un caballo diminuto.", "Un cabalo diminuto.", "Um cavalo minúsculo."],
+["Inyecciones de hormonas.", "Inxeccións de hormonas.", "Injeções de hormonas."],
+["La lepra.", "A lepra.", "A lepra."],
+["Un giro de guion de M. Night Shyamalan.", "Un xiro de guión de M. Night Shyamalan.", "Uma reviravolta à M. Night Shyamalan."],
+["Chupar las cosas para que sean tuyas.", "Chuchar as cousas para que sexan túas.", "Lamber as coisas para ficarem tuas."],
+["Un halcón con caperuza.", "Un falcón con capuz.", "Um falcão de capuz."],
+["Un mimo sufriendo un ictus.", "Un mimo sufrindo un ictus.", "Um mimo a ter um AVC."],
+["Don Limpio, justo detrás de ti.", "Don Limpo, xusto detrás de ti.", "O Mr. Proper, mesmo atrás de ti."],
+["Exactamente lo que te esperabas.", "Exactamente o que agardabas.", "Exatamente o que estavas à espera."],
+["Nickelback.", "Nickelback.", "Nickelback."],
+["Calzoncillos comestibles.", "Calzóns comestibles.", "Cuecas comestíveis."],
+["Malas decisiones vitales.", "Malas decisións vitais.", "Más decisões de vida."],
+["Fantasmas.", "Pantasmas.", "Fantasmas."],
+["La voz de Morgan Freeman.", "A voz de Morgan Freeman.", "A voz do Morgan Freeman."],
+["El autodesprecio.", "O autodesprezo.", "O ódio a si próprio."],
+["La agricultura.", "A agricultura.", "A agricultura."],
+["Mucho ruido y pocas nueces.", "Moito ruído e poucas noces.", "Muita parra e pouca uva."],
+["Nicolas Cage.", "Nicolas Cage.", "Nicolas Cage."],
+["Olor a persona mayor.", "Cheiro a persoa maior.", "Cheiro a velho."],
+["Muestras gratis.", "Mostras de balde.", "Amostras grátis."],
+["Dulce, dulcísima venganza.", "Doce, dulcísima vinganza.", "Doce, dulcíssima vingança."],
+["Ser fabuloso.", "Ser fabuloso.", "Ser fabuloso."],
+["Cambiaformas.", "Cambiaformas.", "Metamorfos."],
+["El harakiri.", "O harakiri.", "O haraquíri."],
+["La fruta prohibida.", "O froito prohibido.", "O fruto proibido."],
+["Huérfanos entrañables.", "Orfos entrañables.", "Órfãos enternecedores."],
+["La inevitable muerte térmica del universo.", "A inevitable morte térmica do universo.", "A inevitável morte térmica do universo."],
+["Post-its pasivo-agresivos.", "Pósits pasivo-agresivos.", "Post-its passivo-agressivos."],
+["Un poco de paz y tranquilidad, joder.", "Un pouco de paz e tranquilidade, carallo.", "Um pouco de paz e sossego, caramba."],
+["Profanar tumbas.", "Profanar tumbas.", "Profanar sepulturas."],
+["La combustión humana espontánea.", "A combustión humana espontánea.", "A combustão humana espontânea."],
+["Pintar con los dedos.", "Pintar cos dedos.", "Pintar com os dedos."],
+["Hacer la cucharita.", "Facer a culleriña.", "Fazer conchinha."],
+["Morir de disentería.", "Morrer de disentería.", "Morrer de disenteria."],
+["La pubertad.", "A puberdade.", "A puberdade."],
+["Una detonación termonuclear.", "Unha detonación termonuclear.", "Uma detonação termonuclear."],
+["El alcoholismo.", "O alcoholismo.", "O alcoolismo."],
+["Hulk Hogan.", "Hulk Hogan.", "Hulk Hogan."],
+["Darth Vader.", "Darth Vader.", "Darth Vader."],
+["La Viagra.", "A Viagra.", "O Viagra."],
+["Cantar a la tirolesa en el peor momento.", "Cantar á tirolesa no peor momento.", "Cantar à tirolesa no pior momento."],
+["Concursos de belleza infantiles.", "Concursos de beleza infantís.", "Concursos de beleza infantis."],
+["Ponerse los calzoncillos del revés para no poner la lavadora.", "Poñer os calzóns do revés para non poñer a lavadora.", "Virar as cuecas do avesso para não pôr a máquina a lavar."],
+["Emborracharse con enjuague bucal.", "Emborracharse con colutorio.", "Embebedar-se com elixir bucal."],
+["Amigos con derecho a roce.", "Amigos con dereito a rozamento.", "Amigos coloridos."],
+["Hacer lo correcto.", "Facer o correcto.", "Fazer a coisa certa."],
+["Manos de jazz enérgicas.", "Mans de jazz enérxicas.", "Mãos de jazz entusiastas."],
+["La destrucción mutua asegurada.", "A destrución mutua asegurada.", "A destruição mútua assegurada."],
+["Robert Downey Jr.", "Robert Downey Jr.", "Robert Downey Jr."],
+["Soluciones de gestión sinérgicas.", "Solucións de xestión sinérxicas.", "Soluções de gestão sinérgicas."],
+["Deudas asfixiantes.", "Débedas asfixiantes.", "Dívidas asfixiantes."],
+["El lechero.", "O leiteiro.", "O leiteiro."],
+["No llevar pantalones.", "Non levar pantalóns.", "Não usar calças."],
+["Esperar un eructo y acabar vomitando en el suelo.", "Agardar un arroto e acabar vomitando no chan.", "Esperar um arroto e acabar a vomitar no chão."],
+["La esperanza.", "A esperanza.", "A esperança."],
+["Los hombres.", "Os homes.", "Os homens."],
+["Un poli honrado que ya no tiene nada que perder.", "Un poli honrado que xa non ten nada que perder.", "Um polícia honesto que já não tem nada a perder."],
+["Poner morritos.", "Poñer morriños.", "Fazer beicinho."],
+["La placenta.", "A placenta.", "A placenta."],
+["Motosierras en lugar de manos.", "Motoserras no canto de mans.", "Motosserras em vez de mãos."],
+["Un minuto de silencio.", "Un minuto de silencio.", "Um minuto de silêncio."],
+["Inundaciones repentinas.", "Inundacións repentinas.", "Cheias repentinas."],
+["El sueño americano.", "O soño americano.", "O sonho americano."],
+["Poner un huevo.", "Poñer un ovo.", "Pôr um ovo."],
+["Un desayuno equilibrado.", "Un almorzo equilibrado.", "Um pequeno-almoço equilibrado."],
+["Una especie de hombre pájaro.", "Unha especie de home paxaro.", "Uma espécie de homem-pássaro."],
+["La levadura.", "O fermento.", "O fermento."],
+["Ser un puto hechicero.", "Ser un puto feiticeiro.", "Ser um feiticeiro do caraças."],
+["Un sombrero chulísimo.", "Un sombreiro chulísimo.", "Um chapéu muito fixe."],
+["Una estupidez insondable.", "Unha estupidez insondable.", "Uma estupidez insondável."],
+["Demasiada gomina.", "Demasiada gomina.", "Gel a mais no cabelo."],
+["Problemas con papá.", "Problemas co papá.", "Problemas com o pai."],
+["Christopher Walken.", "Christopher Walken.", "Christopher Walken."],
+["Fantasías con leñadores.", "Fantasías con leñadores.", "Fantasias com lenhadores."],
+["Una sopa que quema demasiado.", "Unha sopa que queima demasiado.", "Uma sopa demasiado quente."],
+["Llenar la casa de trampas para pillar a los ladrones.", "Encher a casa de trampas para pillar os ladróns.", "Encher a casa de armadilhas para apanhar os ladrões."],
+["Los pulgares oponibles.", "Os polgares opoñibles.", "Os polegares oponíveis."],
+["Hacer justicia por tu cuenta.", "Facer xustiza pola túa conta.", "Fazer justiça pelas próprias mãos."],
+["Una pirámide de cabezas cortadas.", "Unha pirámide de cabezas cortadas.", "Uma pirâmide de cabeças cortadas."],
+["Tensión sexual.", "Tensión sexual.", "Tensão sexual."],
+["Ser rico.", "Ser rico.", "Ser rico."],
+["Jean-Claude Van Damme.", "Jean-Claude Van Damme.", "Jean-Claude Van Damme."],
+["El World of Warcraft.", "O World of Warcraft.", "O World of Warcraft."],
+["Un trasfondo clasista.", "Un trasfondo clasista.", "Um subtexto classista."],
+["El calentamiento global.", "O quecemento global.", "O aquecimento global."],
+["Un herpes labial.", "Un herpes labial.", "Um herpes labial."],
+["Despertarse medio desnudo en el aparcamiento de un Burger King.", "Espertar medio espido no aparcadoiro dun Burger King.", "Acordar meio nu no parque de estacionamento de um Burger King."],
+["Beber solo.", "Beber só.", "Beber sozinho."],
+["Fingir que te importa.", "Finxir que che importa.", "Fingir que te importas."],
+["Las emociones.", "As emocións.", "As emoções."],
+["Las aves que no vuelan.", "As aves que non voan.", "As aves que não voam."],
+["La carrera de actor de Shaquille O'Neal.", "A carreira de actor de Shaquille O'Neal.", "A carreira de ator do Shaquille O'Neal."],
+["Rascarse el culo a escondidas.", "Rañar o cu ás agochadas.", "Coçar o rabo às escondidas."],
+["Niños con correa.", "Nenos con correa.", "Crianças com trela."],
+["El velcro.", "O velcro.", "O velcro."],
+["Los estrógenos.", "Os estróxenos.", "Os estrogénios."],
+["Una LAN party.", "Unha LAN party.", "Uma LAN party."],
+["Los teleoperadores de atención al cliente.", "Os teleoperadores de atención ao cliente.", "Os operadores do apoio ao cliente."],
+["Lady Gaga.", "Lady Gaga.", "Lady Gaga."]
+];
+
+/* ---------- Barajas y mazo derivado ---------- */
+// Cada baraja aporta cartas negras y blancas. El id de una carta es su posición en las listas combinadas
+// (BLACK y WHITES), así que una baraja nueva se añade siempre al final de PACKS.
+const PACKS = [
+  { id: "eq", lists: ["BLACK_T", "WHITE_T"], black: BLACK_T, white: WHITE_T },
+  { id: "cch", lists: ["CAH_BLACK_T", "CAH_WHITE_T"], black: CAH_BLACK_T, white: CAH_WHITE_T },
+];
+const PACK_IDS = PACKS.map(pk => pk.id);
+const DEFAULT_PACKS = ["eq"];
+const NW = NAMES.length * 2;            // los nombres (baraja del equipo) van dos veces para que salgan a menudo
+const WHITES = PACKS.flatMap(pk => pk.white.map((r, i) => ({ r, pk: pk.id, list: pk.lists[1], i })));
+const WCOUNT = NW + WHITES.length;
+function W(id){ if (id < NW) return NAMES[id % NAMES.length] + "."; const w = WHITES[id - NW]; return w ? (w.r[li()] || w.r[0]) : ""; }
+const packOfWhite = id => (id < NW ? "eq" : (WHITES[id - NW] || {}).pk);
+const BLACK = PACKS.flatMap(pk => pk.black.map((r, i) => ({ r, pk: pk.id, list: pk.lists[0], i, p: Math.max(1, (r[0].match(/___/g) || []).length), get t(){ return r[li()] || r[0]; } })));
+// Barajas elegidas (cfg.pk de la partida o las del modo prueba); sin ninguna válida, la del equipo
+const packSet = ids => { const s = new Set((Array.isArray(ids) ? ids : []).filter(id => PACK_IDS.includes(id))); return s.size ? s : new Set(DEFAULT_PACKS); };
+const allWhiteIds = () => [...NAMES.keys(), ...WHITES.map((w, i) => NW + i)];   // sin repetir nombres
+const gameWhiteCount = st => { const sel = packSet(st.cfg.pk); let n = 0; for (let i = 0; i < WCOUNT; i++) if (sel.has(packOfWhite(i))) n++; return n; };
 const BLANK = 1295;            // "zz": carta en blanco
 const MAX_PLAYERS = 20;
 const MIN_PLAYERS = 2;         // cliente + al menos una persona que le envíe propuestas
 const RES_MS = 9000;           // tiempo mostrando el ganador
 const TAKEOVER_MS = 8000;      // sin anfitrión durante este tiempo -> otro toma el relevo
-const KEEP = new Set(NAMES.flatMap(n => n.split(" ")).concat(["Kubernetes", "Jira", "Vigo", "Portugal", "Pokémon", "Taylor", "ChatGPT", "LinkedIn", "YouTube", "Excel", "Kafka", "Oviedo", "España", "Espanha", "Dockerfile"]));
+const KEEP = new Set(NAMES.flatMap(n => n.split(" ")).concat(["Kubernetes", "Jira", "Vigo", "Portugal", "Pokémon", "Taylor", "ChatGPT", "LinkedIn", "YouTube", "Excel", "Kafka", "Oviedo", "España", "Espanha", "Dockerfile",
+  "Tom", "Kanye", "Sean", "Nickelback", "Nicolas", "Hulk", "Darth", "Robert", "Christopher", "Lady", "Don", "Batman", "Picasso", "Harry", "Shaquille", "Morgan"]));
 
 /* ---------- Utilidades ---------- */
 const $ = s => document.querySelector(s);
@@ -1306,7 +1491,7 @@ function presenceMap(){
   if (S.me.key && !m.has(S.me.key)) m.set(S.me.key, S.myPres);
   return m;
 }
-const handSize = n => Math.max(4, Math.min(10, Math.floor(WCOUNT / Math.max(n, 3))));
+const handSize = (n, cnt) => Math.max(4, Math.min(10, Math.floor((cnt || WCOUNT) / Math.max(n, 3))));
 
 /* ---------- Presencia ---------- */
 function setMyPres(patch){
@@ -1330,7 +1515,7 @@ function advertise(){
 }
 
 /* ---------- Anfitrión ---------- */
-function newState(code){ return { v: 1, ep: 1, ver: 0, h: S.me.key, code, ph: "lobby", cfg: { t: 5, b: 2, n: 1 }, hs: 10, pl: [], r: 0, cz: -1, bk: -1, ub: "", sb: {}, rv: [], w: -1, wr: 0 }; }
+function newState(code){ return { v: 1, ep: 1, ver: 0, h: S.me.key, code, ph: "lobby", cfg: { t: 5, b: 2, n: 1, pk: DEFAULT_PACKS.slice() }, hs: 10, pl: [], r: 0, cz: -1, bk: -1, ub: "", sb: {}, rv: [], w: -1, wr: 0 }; }
 function publish(){
   const st = S.st; st.ver++; st.h = S.me.key;
   const snap = clone(st);
@@ -1359,7 +1544,8 @@ function poolWhite(st, extraUsed){
   const used = new Set(extraUsed || []);
   st.pl.forEach(p => decList(p.h).forEach(c => used.add(c)));
   Object.values(st.sb || {}).forEach(s => decList(s[0]).forEach(c => used.add(c)));
-  const pool = []; for (let i = 0; i < WCOUNT; i++) if (!used.has(i)) pool.push(i);
+  const sel = packSet(st.cfg.pk);
+  const pool = []; for (let i = 0; i < WCOUNT; i++) if (!used.has(i) && sel.has(packOfWhite(i))) pool.push(i);
   return shuffle(pool);
 }
 function refill(st, i, avoid){
@@ -1367,9 +1553,10 @@ function refill(st, i, avoid){
   if (need > 0) { let pool = poolWhite(st, avoid); if (pool.length < need && avoid) pool = pool.concat(shuffle(avoid.filter(c => !hand.includes(c)))); hand.push(...pool.slice(0, need)); st.pl[i].h = encList(hand); }
 }
 function drawBlack(st){
-  let used = new Set(decList(st.ub));
-  if (used.size >= BLACK.length) { st.ub = ""; used = new Set(); }
-  const pool = []; for (let i = 0; i < BLACK.length; i++) if (!used.has(i)) pool.push(i);
+  const sel = packSet(st.cfg.pk);
+  const free = used => BLACK.map((b, i) => i).filter(i => sel.has(BLACK[i].pk) && !used.has(i));
+  let pool = free(new Set(decList(st.ub)));
+  if (!pool.length) { st.ub = ""; pool = free(new Set()); }
   const b = pool[Math.floor(Math.random() * pool.length)]; st.ub += enc(b); return b;
 }
 function nextCzar(st){
@@ -1396,7 +1583,7 @@ const allShown = st => st.rn == null || st.rn > st.rv.length;
 function award(st, seat, random){ st.w = seat; st.wr = random ? 1 : 0; if (st.pl[seat]) st.pl[seat].s++; st.ph = "res"; S.resAt = Date.now(); }
 function startGame(st){
   const seats = activeSeats(st); if (seats.length < MIN_PLAYERS) return;
-  st.hs = handSize(seats.length);
+  st.hs = handSize(seats.length, gameWhiteCount(st));
   for (const i of seats) Object.assign(st.pl[i], { s: 0, g: 0, b: st.cfg.b, nb: cfgOwn(st), h: "" });
   st.r = 0; st.cz = -1; st.ub = ""; st.sb = {}; st.rv = []; st.rn = 0; st.w = -1; st.wr = 0; st.cq = []; st.cb = null;
   nextRound(st);
@@ -1467,6 +1654,11 @@ function hostDo(op, arg){
   const st = S.st;
   if (op === "start" && st.ph === "lobby") startGame(st);
   else if (op === "cfg" && st.ph === "lobby") st.cfg[arg.k] = arg.v;
+  else if (op === "pack" && st.ph === "lobby" && PACK_IDS.includes(arg)) {
+    const sel = packSet(st.cfg.pk);
+    if (sel.has(arg)) { if (sel.size === 1) return; sel.delete(arg); } else sel.add(arg);   // siempre queda al menos una
+    st.cfg.pk = PACK_IDS.filter(id => sel.has(id));
+  }
   else if (op === "judge" && st.ph === "play" && Object.keys(st.sb).length) toJudge(st);
   else if (op === "skip" && (st.ph === "play" || st.ph === "judge")) nextRound(st);
   else if (op === "reveal" && st.ph === "judge" && !allShown(st)) st.rn++;
@@ -1726,6 +1918,13 @@ function seg(k, opts, cur, label){
 }
 const youTag = () => ` <span class="tag">${esc(t("you"))}</span>`;
 const clientLine = (st, me) => { const cz = st.pl[st.cz]; return `<div class="roundline"><span class="r">${esc(t("round", { r: st.r }))}</span><span>${esc(t("client"))} ${cz ? avHTML(cz, "xs") + " " : ""}<b>${esc(cz ? cz.n : "—")}</b>${me >= 0 && st.cz === me ? esc(t("youParen")) : ""}</span></div>`; };
+// Selector de barajas (act vacío = solo lectura)
+function packsHTML(sel, act){
+  const chips = PACKS.map(pk => act
+    ? `<button type="button" class="chip" data-act="${act}" data-p="${pk.id}" aria-pressed="${sel.has(pk.id)}">${esc(t("pk_" + pk.id))}</button>`
+    : (sel.has(pk.id) ? `<span class="chip" aria-pressed="true">${esc(t("pk_" + pk.id))}</span>` : "")).join("");
+  return `<div class="seg"><span class="label">${esc(t("packsLabel"))}</span><div class="chips">${chips}</div><p class="hint">${esc(PACK_IDS.filter(id => sel.has(id)).map(id => t("pkd_" + id)).join(" "))}</p></div>`;
+}
 function renderLobby(st){
   const seats = activeSeats(st); const n = seats.length;
   const host = st.pl.find(p => p.k === st.h);
@@ -1733,6 +1932,7 @@ function renderLobby(st){
   const cfg = S.isHost
     ? seg("t", [3, 5, 7, 10], st.cfg.t, t("ptsToWin")) + seg("b", [0, 1, 2, 3], st.cfg.b, t("blanksPer")) + seg("n", [0, 1, 2], cfgOwn(st), t("nbPer"))
     : `<p>${tn("cfgRO", Number(st.cfg.b) || 0, { t: Number(st.cfg.t) || 0 })}</p><p>${cfgOwn(st) ? tn("cfgNb", cfgOwn(st)) : t("cfgNb0")}</p>`;
+  const packs = packsHTML(packSet(st.cfg.pk), S.isHost ? "pack" : "");
   const start = S.isHost
     ? (n >= MIN_PLAYERS ? `<button type="button" class="btn big" data-act="host" data-op="start">${esc(t("startWith", { n }))}</button>` : `<button type="button" class="btn big" disabled>${esc(tn("need", MIN_PLAYERS - n))}</button>`)
     : `<p class="status"><span class="big">${esc(t("waitHost", { h: host ? host.n : t("theHost") }))}</span></p>`;
@@ -1744,7 +1944,7 @@ function renderLobby(st){
       <p class="hint">${esc(t("lobbyHint"))}</p>
     </div>
     <div class="panel"><h2>${esc(t("inRoom"))} · ${n}/${MAX_PLAYERS}</h2><ul class="pchips">${people}</ul></div>
-    <div class="panel"><h2>${esc(t("settings"))}</h2>${cfg}<p class="hint">${esc(t("handHint", { p: Math.max(n, MIN_PLAYERS), h: handSize(n) }))}</p></div>
+    <div class="panel"><h2>${esc(t("settings"))}</h2>${packs}${cfg}<p class="hint">${esc(t("handHint", { p: Math.max(n, MIN_PLAYERS), h: handSize(n, gameWhiteCount(st)) }))}</p></div>
     ${start}`);
 }
 function pendingNames(st){
@@ -1974,9 +2174,16 @@ function demoClose(){
 // y se van gastando para no repetir hasta haberlos visto todos.
 const PR_HAND = 8;
 const PR = { bk: -1, hand: [], sel: [], n: 0, last: null, bDeck: [], wDeck: [] };
-const prWhiteIds = () => [...NAMES.keys(), ...Array.from({ length: WHITE_T.length }, (_, i) => NW + i)];
+const prPacks = () => packSet(load("cxc:prpacks"));
+const prWhiteIds = () => { const sel = prPacks(); return allWhiteIds().filter(id => sel.has(packOfWhite(id))); };
+function prTogglePack(id){
+  const sel = prPacks(); if (!PACK_IDS.includes(id)) return;
+  if (sel.has(id)) { if (sel.size === 1) return; sel.delete(id); } else sel.add(id);
+  store("cxc:prpacks", PACK_IDS.filter(x => sel.has(x)));
+  PR.bDeck = []; PR.wDeck = []; PR.hand = []; prDraw(); prRender();
+}
 function prDraw(){
-  if (!PR.bDeck.length) PR.bDeck = shuffle(BLACK.map((b, i) => i).filter(i => i !== PR.bk));
+  if (!PR.bDeck.length) { const sel = prPacks(); PR.bDeck = shuffle(BLACK.map((b, i) => i).filter(i => i !== PR.bk && sel.has(BLACK[i].pk))); }
   PR.bk = PR.bDeck.pop();
   if (PR.wDeck.length < PR_HAND) PR.wDeck = shuffle(prWhiteIds().filter(id => !PR.wDeck.includes(id) && !PR.hand.includes(id))).concat(PR.wDeck);
   PR.hand = PR.wDeck.splice(-PR_HAND);
@@ -1984,6 +2191,7 @@ function prDraw(){
 }
 function prRender(){
   const blk = BLACK[PR.bk];
+  setHTML($("#prPacks"), packsHTML(prPacks(), "pr-pack"));
   setHTML($("#prBlack"), blackCard(blk, true));
   $("#prAsk").textContent = blk.p === 1 ? t("pick1") : t("pick2");
   $("#prCount").textContent = t("prCount", { n: PR.n });
@@ -2019,12 +2227,12 @@ const FB_REASONS = ["nonsense", "dislike", "translation", "other"];
 const fold = s => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 // Una carta como { color, list, i, id }: list/i dicen dónde está en el código; id es el del juego para pintarla
 function fbRef(color, id){
-  if (color === "black") return { color, list: "BLACK_T", i: id, id };
+  if (color === "black") return { color, list: BLACK[id].list, i: BLACK[id].i, id };
   if (id < NW) return { color, list: "NAMES", i: id % NAMES.length, id: id % NAMES.length };
-  return { color, list: "WHITE_T", i: id - NW, id };
+  return { color, list: WHITES[id - NW].list, i: WHITES[id - NW].i, id };
 }
 const fbText = c => (c.color === "black" ? BLACK[c.id].t : W(c.id));
-const fbAll = () => [...BLACK.map((b, i) => fbRef("black", i)), ...prWhiteIds().map(id => fbRef("white", id))];
+const fbAll = () => [...BLACK.map((b, i) => fbRef("black", i)), ...allWhiteIds().map(id => fbRef("white", id))];
 // Las cartas que hay en pantalla (modo prueba o partida) para reportarlas sin buscarlas
 function fbContext(){
   if (!$("#practice").hidden && BLACK[PR.bk]) return [fbRef("black", PR.bk), ...PR.hand.map(id => fbRef("white", id))];
@@ -2170,6 +2378,8 @@ function bind(){
     else if (a === "fb-send") fbSend();
     else if (a === "fb-again") { $("#fbDone").hidden = true; $("#fbForm").hidden = false; fbRender(); }
     else if (a === "pr-open") prOpen();
+    else if (a === "pr-pack") prTogglePack(el.dataset.p);
+    else if (a === "pack") hostDo("pack", el.dataset.p);
     else if (a === "pr-close") prClose();
     else if (a === "pr-card") prToggle(Number(el.dataset.id));
     else if (a === "pr-send") prSend();
