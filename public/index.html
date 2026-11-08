@@ -1167,6 +1167,7 @@ function W(id){ if (id < NW) return NAMES[id % NAMES.length] + "."; const r = WH
 const BLACK = BLACK_T.map(r => ({ r, p: Math.max(1, (r[0].match(/___/g) || []).length), get t(){ return r[li()] || r[0]; } }));
 const BLANK = 1295;            // "zz": carta en blanco
 const MAX_PLAYERS = 20;
+const MIN_PLAYERS = 2;         // cliente + al menos una persona que le envíe propuestas
 const RES_MS = 9000;           // tiempo mostrando el ganador
 const TAKEOVER_MS = 8000;      // sin anfitrión durante este tiempo -> otro toma el relevo
 const KEEP = new Set(NAMES.flatMap(n => n.split(" ")).concat(["Kubernetes", "Jira", "Vigo", "Portugal", "Pokémon", "Taylor", "ChatGPT", "LinkedIn", "YouTube", "Excel", "Kafka", "Oviedo", "España", "Espanha", "Dockerfile"]));
@@ -1394,7 +1395,7 @@ const shownSubs = st => Math.min(st.rv.length, st.rn == null ? st.rv.length : st
 const allShown = st => st.rn == null || st.rn > st.rv.length;
 function award(st, seat, random){ st.w = seat; st.wr = random ? 1 : 0; if (st.pl[seat]) st.pl[seat].s++; st.ph = "res"; S.resAt = Date.now(); }
 function startGame(st){
-  const seats = activeSeats(st); if (seats.length < 3) return;
+  const seats = activeSeats(st); if (seats.length < MIN_PLAYERS) return;
   st.hs = handSize(seats.length);
   for (const i of seats) Object.assign(st.pl[i], { s: 0, g: 0, b: st.cfg.b, nb: cfgOwn(st), h: "" });
   st.r = 0; st.cz = -1; st.ub = ""; st.sb = {}; st.rv = []; st.rn = 0; st.w = -1; st.wr = 0; st.cq = []; st.cb = null;
@@ -1733,7 +1734,7 @@ function renderLobby(st){
     ? seg("t", [3, 5, 7, 10], st.cfg.t, t("ptsToWin")) + seg("b", [0, 1, 2, 3], st.cfg.b, t("blanksPer")) + seg("n", [0, 1, 2], cfgOwn(st), t("nbPer"))
     : `<p>${tn("cfgRO", Number(st.cfg.b) || 0, { t: Number(st.cfg.t) || 0 })}</p><p>${cfgOwn(st) ? tn("cfgNb", cfgOwn(st)) : t("cfgNb0")}</p>`;
   const start = S.isHost
-    ? (n >= 3 ? `<button type="button" class="btn big" data-act="host" data-op="start">${esc(t("startWith", { n }))}</button>` : `<button type="button" class="btn big" disabled>${esc(tn("need", 3 - n))}</button>`)
+    ? (n >= MIN_PLAYERS ? `<button type="button" class="btn big" data-act="host" data-op="start">${esc(t("startWith", { n }))}</button>` : `<button type="button" class="btn big" disabled>${esc(tn("need", MIN_PLAYERS - n))}</button>`)
     : `<p class="status"><span class="big">${esc(t("waitHost", { h: host ? host.n : t("theHost") }))}</span></p>`;
   setHTML($("#lobbyV"), `
     <div class="codebox">
@@ -1743,7 +1744,7 @@ function renderLobby(st){
       <p class="hint">${esc(t("lobbyHint"))}</p>
     </div>
     <div class="panel"><h2>${esc(t("inRoom"))} · ${n}/${MAX_PLAYERS}</h2><ul class="pchips">${people}</ul></div>
-    <div class="panel"><h2>${esc(t("settings"))}</h2>${cfg}<p class="hint">${esc(t("handHint", { p: Math.max(n, 3), h: handSize(n) }))}</p></div>
+    <div class="panel"><h2>${esc(t("settings"))}</h2>${cfg}<p class="hint">${esc(t("handHint", { p: Math.max(n, MIN_PLAYERS), h: handSize(n) }))}</p></div>
     ${start}`);
 }
 function pendingNames(st){
