@@ -81,7 +81,7 @@ GitHub Pages solo sirve ficheros estáticos, así que el juego funciona en modo 
 
 ## Vercel
 
-El sitio se despliega en Vercel, que sirve `public/` como página estática. Vercel no ejecuta `server.js` (no admite WebSocket de larga duración), así que, igual que en GitHub Pages, el juego funciona en modo sin servidor (WebRTC).
+El sitio se despliega en Vercel, que sirve `public/` como página estática. Vercel no ejecuta `server.js` (no admite WebSocket de larga duración), así que la página de Vercel usa el servidor de salas desplegado en Render: `<meta name="cxc-server">` apunta a `wss://cartas-contra-el-cliente.onrender.com/ws`. Para volver al modo sin servidor (WebRTC), deja ese `content` vacío.
 
 La página carga **Vercel Web Analytics** (`/_vercel/insights/script.js`) y **Speed Insights** (`/_vercel/speed-insights/script.js`). Para que recojan datos hay que activarlos en el proyecto de Vercel, en las pestañas *Analytics* y *Speed Insights*, y volver a desplegar. Fuera de Vercel (en local, Docker o GitHub Pages) esas rutas no existen y simplemente no se registra nada.
 
