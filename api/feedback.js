@@ -12,7 +12,10 @@ const MAX_BODY = 8192;
 const MAX_PER_IP = 30;             // envíos por IP cada 10 minutos (por instancia); en una oficina todos comparten IP
 const LANGS = { es: "español", gl: "gallego", pt: "portugués" };
 const REASONS = { nonsense: "No tiene sentido", dislike: "No me gusta", translation: "Traducción rara", other: "Otro motivo" };
-const LISTS = ["BLACK_T", "WHITE_T", "NAMES", "CAH_BLACK_T", "CAH_WHITE_T"];
+const LISTS = ["BLACK_T", "WHITE_T", "NAMES", "CAH_BLACK_T", "CAH_WHITE_T", "PLAYER_BLACK_T", "PLAYER_WHITE_T"];
+// Barajas a las que se puede sugerir una carta; por defecto, la de sugerencias de jugadores.
+// .github/scripts/add-card.js lee el id entre comillas invertidas de la línea "Baraja" al aprobarla.
+const DECKS = { jug: "Sugerencias de jugadores", eq: "Equipo", cch: "Cartas contra la Humanidad" };
 // Cartas escritas durante una partida, que el juego envía solo
 const ORIGINS = { blank: "carta en blanco jugada en una partida", black: "carta negra propia creada en una partida" };
 
@@ -47,10 +50,12 @@ function build(m){
     if (text.length < 3) return null;
     if (color === "black" ? blanks < 1 || blanks > 2 : blanks > 0) return null;
     const origin = ORIGINS[m.origin] ? m.origin : null;
+    const deck = DECKS[m.deck] ? m.deck : "jug";
+    meta.push(`**Baraja:** ${DECKS[deck]} (\`${deck}\`)`);
     if (origin) meta.push(`**Origen:** ${ORIGINS[origin]}`);
     return {
       title: quiet(`Sugerencia de carta ${colorName(color)}: ${short(text)}`),
-      body: [...meta, "", quote(text), "", "---", "Para aprobarla, ponle la etiqueta `aprobada`."].join("\n"),
+      body: [...meta, "", quote(text), "", "---", "Para añadirla al juego, ponle la etiqueta `aprobada` (puedes editar antes el texto). Para descartarla, cierra el issue."].join("\n"),
       labels: ["sugerencia", ...labels, ...(origin ? ["desde-partida"] : [])],
     };
   }

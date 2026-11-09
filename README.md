@@ -116,6 +116,16 @@ Sin `GITHUB_TOKEN` (o en GitHub Pages, que no ejecuta funciones) el formulario s
 
 Ojo: si el repositorio es público, las sugerencias y reportes también lo son.
 
+### Aprobar o descartar sugerencias
+
+Al sugerir una carta se elige la baraja: **Sugerencias de jugadores** (por defecto), **Equipo** o **Cartas contra la Humanidad**. Las cartas escritas en partida van a Sugerencias de jugadores. Esa baraja empieza vacía y no se puede elegir para jugar hasta que tiene cartas negras y blancas.
+
+- **Aprobar:** ponle al issue la etiqueta `aprobada`. El workflow `.github/workflows/cartas-aprobadas.yml` (con `.github/scripts/add-card.js`) añade la carta al final de su baraja en `public/index.html`, sube el cambio a `main` (Vercel lo publica solo), comenta en el issue y lo cierra. Antes de aprobar puedes editar el texto del issue: se usa lo que haya en las líneas que empiezan por `>`, y la baraja de la línea **Baraja** (el id entre comillas invertidas).
+- **Descartar:** cierra el issue como *Not planned*.
+- **Traducciones:** la carta entra con el mismo texto en los tres idiomas, marcada en el código con `// #N: pendiente de traducir`, y el issue recibe la etiqueta `pendiente-de-traducir` (si existe en el repo).
+
+Para que el workflow pueda subir el cambio, en *Settings → Actions → General → Workflow permissions* tiene que estar permitido escribir (o al menos no estar restringido a solo lectura por la organización).
+
 ## Cartas negras propias
 
 Durante la partida, cada persona puede escribir su propia carta negra (botón "Escribir una carta negra", abajo del todo). Sale en la siguiente ronda en lugar de una del mazo, con "Escrita por …" en la carta. Cuántas puede escribir cada persona se elige en la sala de espera (0, 1 o 2; por defecto 1), y como mucho puede haber 2 esperando turno a la vez. Son textos libres de hasta 100 caracteres con uno o dos huecos `___`, y no se traducen.
