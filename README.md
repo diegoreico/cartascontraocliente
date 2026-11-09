@@ -116,6 +116,17 @@ Sin `GITHUB_TOKEN` (o en GitHub Pages, que no ejecuta funciones) el formulario s
 
 Ojo: si el repositorio es público, las sugerencias y reportes también lo son.
 
+### Errores en el navegador
+
+Cualquier error que ocurra en el navegador de quien juega (errores de JavaScript, promesas rechazadas sin capturar, o un script, imagen o estilo que no se puede cargar) se envía solo a `api/feedback.js`, que abre un **issue con la etiqueta `error`**: mensaje, pila, dónde ocurrió, navegador y estado del juego (pantalla, fase, ronda, jugadores, si era anfitrión, tipo de conexión).
+
+- Un issue por error distinto (lo identifica una huella entre corchetes en el título). Si se repite, se añade un comentario en ese mismo issue, hasta 25; después solo se cuenta.
+- Como mucho 5 errores distintos por carga de página, y 20 por IP cada 10 minutos, aparte del cupo de sugerencias.
+- Se ignoran los fallos de la analítica de Vercel (`/_vercel/…`), que fuera de Vercel no existe.
+- Cierra el issue cuando el error esté arreglado: si vuelve a pasar después, se abre uno nuevo.
+
+El código está en el `<script>` del `<head>` de `public/index.html` (va antes del juego para capturar también sus errores) y el contexto lo añade el juego con `window.cxcErrCtx`.
+
 ### Editor de mazos y revisión
 
 En la portada, **Editar mazos** abre el editor:
