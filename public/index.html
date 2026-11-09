@@ -343,6 +343,7 @@ button.fb-opt:hover{outline:2px solid var(--accent);outline-offset:2px}
     </div>
 
     <div id="noRoom" class="notice" hidden data-i18n="noRoom">Para jugar, abre esta página dentro de Claude con tu cuenta iniciada.</div>
+    <div id="srvWake" class="notice" hidden role="status" data-i18n="srvWake">Arrancando el servidor del juego…</div>
 
     <div id="homeForms" class="home-grid">
       <div class="panel">
@@ -1037,6 +1038,8 @@ const TX = {
   connecting: ["Conectando…", "Conectando…", "A ligar…"],
   notFound: ["No hay ninguna partida abierta con el código {c}. Revisa el código o sal y crea una sala nueva.", "Non hai ningunha partida aberta co código {c}. Revisa o código ou sae e crea unha sala nova.", "Não há nenhum jogo aberto com o código {c}. Confirma o código ou sai e cria uma sala nova."],
   connectingRoom: ["Conectando con la sala…", "Conectando coa sala…", "A ligar à sala…"],
+  srvWake: ["Arrancando el servidor del juego… Si nadie ha jugado en un rato, puede tardar cerca de un minuto. Mientras, puedes ir poniendo tu nombre y crear o entrar en una sala.", "Arrancando o servidor do xogo… Se ninguén xogou nun anaco, pode tardar preto dun minuto. Mentres, podes ir poñendo o teu nome e crear ou entrar nunha sala.", "A arrancar o servidor do jogo… Se ninguém jogou há algum tempo, pode demorar cerca de um minuto. Entretanto, podes ir escrevendo o teu nome e criar ou entrar numa sala."],
+  srvWakeRoom: ["Preparando el servidor para la sala… Si llevaba un rato sin usarse, puede tardar cerca de un minuto.", "Preparando o servidor para a sala… Se levaba un anaco sen usarse, pode tardar preto dun minuto.", "A preparar o servidor para a sala… Se não era usado há algum tempo, pode demorar cerca de um minuto."],
   stale: ["Buscando a quien lleva la partida…", "Buscando a quen leva a partida…", "À procura de quem gere o jogo…"],
   full: ["La sala está llena (20 personas). Puedes mirar la partida.", "A sala está chea (20 persoas). Podes mirar a partida.", "A sala está cheia (20 pessoas). Podes ver o jogo."],
   entering: ["Entrando en la partida…", "Entrando na partida…", "A entrar no jogo…"],
@@ -1735,7 +1738,7 @@ function tick(){
   if (!S.nroom) return;
   if (S.isHost && S.st && Date.now() - (S.hbAt || 0) >= HB_MS) { S.hbAt = Date.now(); S.hbN = (S.hbN || 0) + 1; setMyPres({ hb: [S.st.ep, S.hbN] }); }
   if (S.isHost) hostSync(); else electionTick();
-  if (!S.st && S.mode === "join" && Date.now() - S.joinAt > 12000) S.notFound = true;
+  if (!S.st && S.mode === "join" && S.online !== false && Date.now() - S.joinAt > 12000) S.notFound = true;
   render();
 }
 
@@ -1754,6 +1757,7 @@ async function enterRoom(code, name, mode){
   if (!name) { homeError(t("errName")); $("#nameIn").focus(); return; }
   homeError("");
   let nr;
+  if (S.online === false) toast(t("srvWakeRoom"));
   try { nr = await S.room.join("cxc-" + code.toLowerCase()); }
   catch (e) { homeError(joinErrorText(e)); return; }
   Object.assign(S, { nroom: nr, code, name, mode, st: null, isHost: false, stale: false, myPres: {}, sel: [], blankText: "", pickIdx: -1, hostGoneAt: 0, czarGoneAt: 0, resAt: 0, joinAt: Date.now(), notFound: false, err: "", hbSeen: null, hbAt: 0, hbN: 0 });
@@ -1919,7 +1923,7 @@ function render(){
   $("#tbPhase").textContent = phaseLabel(st);
   if (st) renderNbBtn(st); else $("#nbBtn").hidden = true;
   let msg = S.err ? t(S.err) : "";
-  if (!msg && !st) msg = S.notFound ? t("notFound", { c: S.code }) : t("connectingRoom");
+  if (!msg && !st) msg = S.notFound ? t("notFound", { c: S.code }) : S.online === false ? t("srvWakeRoom") : t("connectingRoom");
   if (!msg && S.stale) msg = t("stale");
   if (!msg && st && mySeat(st) < 0) msg = activeSeats(st).length >= MAX_PLAYERS ? t("full") : t("entering");
   const gm = $("#gameMsg"); gm.textContent = msg || ""; gm.hidden = !msg;
@@ -2523,7 +2527,8 @@ function createWsRoom(url){
       return new Promise((resolve, reject) => {
         waiting.set(id, { resolve, reject });
         raw({ t: "join", room: name, presence: st.mine, id });
-        setTimeout(() => { if (waiting.has(id)) { waiting.delete(id); rooms.delete(name); reject({ code: "upstream_error" }); } }, 10000);
+        // Si el servidor aún no responde (puede estar arrancando), se le da hasta minuto y medio
+        setTimeout(() => { if (waiting.has(id)) { waiting.delete(id); rooms.delete(name); reject({ code: "upstream_error" }); } }, open ? 15000 : 90000);
       });
     },
   });
@@ -2604,14 +2609,25 @@ async function getRoom(){
   catch (e) { console.warn("p2p", e); return { room: null, inClaude: false }; }
 }
 
+function srvWakeNotice(){ const el = $("#srvWake"); if (el) el.hidden = S.online !== false || !S.bootAt || Date.now() - S.bootAt < 1200; }
+
 /* ---------- Arranque ---------- */
 async function start(data){
+  S.bootAt = Date.now();
   LANG = pickLang();
   bind(); applyStatic(); renderHome();
   const got = await getRoom(); const room = got.room;
   S.room = room;
   if (!room) { const nr = $("#noRoom"); nr.dataset.i18n = got.inClaude ? "noRoom" : "noServer"; nr.textContent = t(nr.dataset.i18n); nr.hidden = false; $("#homeForms").hidden = true; return; }
   room.onPeers(onLobbyPeers, () => {});
+  // Con servidor de salas: aviso mientras arranca (en el plan gratuito de Render se duerme y tarda en despertar)
+  if (serverUrl() && typeof room.onConnection === "function") {
+    room.onConnection(on => {
+      if (on && S.online === false && S.nroom && !S.st) S.joinAt = Date.now();   // el plazo de "no existe" empieza al conectar
+      S.online = on; srvWakeNotice(); render();
+    });
+    setTimeout(srvWakeNotice, 1200);   // sin aviso si conecta enseguida
+  }
   setInterval(tick, 1000);
   renderHome();
   if (data && data.code && data.name) enterRoom(data.code, data.name, "join");
