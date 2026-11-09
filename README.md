@@ -62,6 +62,10 @@ Limitaciones del modo sin servidor:
 - Si el anfitrión cierra la página, el relevo tarda unos 20 segundos (unos 8 con servidor).
 - La sala de espera (la lista de salas abiertas) es común a todo el que abra la página.
 
+### Elegir la conexión al crear la sala
+
+Si la página tiene servidor configurado, al crear una sala se puede elegir **Servidor** (por defecto, recomendado para grupos grandes o redes distintas) o **Directa (P2P)** (sin esperar a que arranque el servidor; mejor para grupos pequeños en la misma red). Los códigos de las salas P2P empiezan por **P**: quien entra con el código, o desde la lista de salas abiertas, se conecta de la forma correcta sin elegir nada. La lista de salas abiertas sigue yendo por el servidor.
+
 ### Servidor en Render
 
 Con muchas personas (más de 6 u 8) o desde redes distintas, el modo sin servidor se vuelve inestable: cada navegador mantiene una conexión directa con todos los demás y algunas fallan. El modo con servidor es mucho más estable, porque cada navegador solo se conecta al servidor.
