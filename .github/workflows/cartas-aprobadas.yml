@@ -1,6 +1,6 @@
 name: Añadir carta aprobada
 
-# Al poner la etiqueta "aprobada" en un issue de sugerencia, añade la carta al juego,
+# Al poner la etiqueta "aprobada" en un issue de sugerencia o de mazo, aplica los cambios al juego,
 # publica el cambio en main, comenta y cierra el issue.
 on:
   issues:
@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   add:
-    if: github.event.label.name == 'aprobada' && contains(github.event.issue.labels.*.name, 'sugerencia')
+    if: github.event.label.name == 'aprobada' && (contains(github.event.issue.labels.*.name, 'sugerencia') || contains(github.event.issue.labels.*.name, 'mazo'))
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -24,7 +24,7 @@ jobs:
           ref: main
 
       - id: card
-        run: node .github/scripts/add-card.js
+        run: node .github/scripts/apply-cards.js
         env:
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           ISSUE_BODY: ${{ github.event.issue.body }}

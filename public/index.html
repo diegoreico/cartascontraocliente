@@ -275,6 +275,15 @@ aside.board{background:var(--surface);border:1px solid var(--line);border-radius
 .read-prog{display:flex;gap:6px}
 .read-prog span{flex:1;height:4px;border-radius:4px;background:var(--line)}
 .read-prog span.on{background:var(--accent)}
+/* Editor de mazos */
+.editor{display:grid;gap:14px}
+.ed-list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.ed-list li.fb-opt{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.ed-list li.ed-on{display:grid;gap:6px;justify-content:stretch}
+.ed-list li.ed-on small{font:500 13px/1.3 var(--f-body);opacity:.75}
+.ed-list li.ed-off s{opacity:.55}
+.ed-acts{display:flex;gap:14px;flex:none}
+.fb-opt.b .linkbtn{color:inherit}
 /* Modo prueba */
 .practice{display:grid;gap:14px}
 .pr-ask{font:700 19px/1.3 var(--f-display);margin:0}
@@ -304,6 +313,7 @@ button.fb-opt:hover{outline:2px solid var(--accent);outline-offset:2px}
 @media (min-width:1024px){
   .demo{max-width:760px;margin-inline:auto}
   .practice{max-width:860px;margin-inline:auto}
+  #editor{max-width:860px;margin-inline:auto}
   .demo-stage{max-width:none}
 }
 @media (min-width:1500px) and (min-height:820px){ html{zoom:1.15} }
@@ -408,7 +418,7 @@ button.fb-opt:hover{outline:2px solid var(--accent);outline-offset:2px}
       <h2 data-i18n="fbCtaTitle">¿Se te ocurre una carta?</h2>
       <p class="hint" data-i18n="fbCtaHint">Propón cartas nuevas o avisa de las que no tienen sentido. Se revisan antes de añadirlas al juego.</p>
       <div class="hero-actions">
-        <button type="button" class="btn ghost" data-act="fb-open" data-mode="suggest" data-i18n="fbSuggestBtn">Sugerir una carta</button>
+        <button type="button" id="edBtn" class="btn ghost" data-act="ed-open" data-i18n="edBtn">Editar mazos</button>
         <button type="button" class="btn ghost" data-act="fb-open" data-mode="report" data-i18n="fbReportBtn">Reportar una carta</button>
       </div>
     </div>
@@ -508,6 +518,55 @@ button.fb-opt:hover{outline:2px solid var(--accent);outline-offset:2px}
     <div class="pr-foot"><div class="langs" role="group" aria-label="Idioma" data-langs></div></div>
   </section>
 
+  <section id="editor" class="editor" hidden aria-labelledby="edTitle">
+    <header class="topbar">
+      <div class="tb-left">
+        <span class="tb-brand" id="edTitle" tabindex="-1" data-i18n="edTitle">Editor de mazos</span>
+        <span id="edCount" class="tb-phase"></span>
+      </div>
+      <div class="tb-right"><button type="button" class="btn ghost sm" data-act="ed-close" data-i18n="close">Cerrar</button></div>
+    </header>
+    <div id="edForm" class="editor">
+      <p class="hint" data-i18n="edIntro">Propón cartas nuevas, cambia o quita las que haya, o pide un mazo temático nuevo.</p>
+      <div class="seg"><span class="label" data-i18n="edDeckLabel">Mazo</span><div class="opts" id="edDecks"></div></div>
+      <div id="edNew" class="fb-in0" hidden>
+        <label for="edNewName" data-i18n="edNewName">Nombre del mazo</label>
+        <input id="edNewName" maxlength="40" autocomplete="off">
+        <label for="edNewDesc" data-i18n="edNewDesc">De qué va (opcional)</label>
+        <input id="edNewDesc" maxlength="160" autocomplete="off">
+      </div>
+      <div class="seg"><div class="opts" id="edTabs"></div></div>
+      <div class="panel">
+        <label for="edAddIn"><b data-i18n="edAddLabel">Añadir cartas</b></label>
+        <textarea id="edAddIn" rows="4" maxlength="4000"></textarea>
+        <p class="hint" id="edAddHint"></p>
+        <p id="edAddErr" class="err" role="alert" hidden></p>
+        <div><button type="button" class="btn sm" data-act="ed-add" data-i18n="edAddBtn">Añadir al borrador</button></div>
+        <ul class="ed-list" id="edAdded" aria-label="Cartas nuevas"></ul>
+      </div>
+      <div id="edExisting" class="fb-in0">
+        <span class="label" data-i18n="edExisting">Cartas del mazo</span>
+        <label for="edSearch" class="sr-only" data-i18n="edSearch">Buscar en el mazo</label>
+        <input id="edSearch" autocomplete="off" placeholder="Buscar en el mazo" data-i18n-ph="edSearch">
+        <ul class="ed-list" id="edList"></ul>
+        <p class="hint" id="edMore"></p>
+      </div>
+      <div class="panel">
+        <p class="pr-ask" id="edSummary"></p>
+        <label for="edAuthor" data-i18n="fbName">Tu nombre (opcional)</label>
+        <input id="edAuthor" maxlength="40" autocomplete="nickname">
+        <input id="edHp" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+        <p id="edErr" class="err" role="alert" hidden></p>
+        <button type="button" id="edSend" class="btn big" data-act="ed-send" data-i18n="edSend">Enviar para revisión</button>
+        <p class="hint"><span data-i18n="edLangNote">Escribe en tu idioma.</span> <span data-i18n="edNote">El borrador se guarda en este navegador.</span></p>
+      </div>
+    </div>
+    <div id="edDone" class="editor" hidden>
+      <p class="pr-ask" data-i18n="edDone">¡Enviado!</p>
+      <div class="hero-actions"><button type="button" class="btn" data-act="ed-again" data-i18n="edAgain">Seguir editando</button><button type="button" class="btn ghost" data-act="ed-close" data-i18n="close">Cerrar</button></div>
+    </div>
+  </section>
+
   <dialog id="nbDlg" class="fb-dlg" aria-labelledby="nbTitle">
     <div class="fb-in">
       <div class="fb-head">
@@ -531,7 +590,7 @@ button.fb-opt:hover{outline:2px solid var(--accent);outline-offset:2px}
         <button type="button" class="btn ghost sm" data-act="fb-close" data-i18n="close">Cerrar</button>
       </div>
       <div id="fbForm" class="fb-in0">
-        <div class="seg"><div class="opts">
+        <div class="seg" hidden><div class="opts">
           <button type="button" data-act="fb-mode" data-mode="suggest" data-i18n="fbTabSuggest">Sugerir</button>
           <button type="button" data-act="fb-mode" data-mode="report" data-i18n="fbTabReport">Reportar</button>
         </div></div>
@@ -971,7 +1030,39 @@ const TX = {
   demoTitle: ["Partida de ejemplo", "Partida de exemplo", "Jogo de exemplo"],
   close: ["Cerrar", "Pechar", "Fechar"],
   fbCtaTitle: ["¿Se te ocurre una carta?", "Ocórreseche unha carta?", "Tens uma ideia para uma carta?"],
-  fbCtaHint: ["Propón cartas nuevas o avisa de las que no tienen sentido. Se revisan antes de añadirlas al juego.", "Propón cartas novas ou avisa das que non teñen sentido. Revísanse antes de engadilas ao xogo.", "Propõe cartas novas ou avisa das que não fazem sentido. São revistas antes de entrarem no jogo."],
+  fbCtaHint: ["Propón cartas nuevas, cambios o un mazo temático entero, o avisa de las cartas que no tienen sentido. Todo se revisa antes de entrar en el juego.", "Propón cartas novas, cambios ou unha baralla temática enteira, ou avisa das cartas que non teñen sentido. Todo se revisa antes de entrar no xogo.", "Propõe cartas novas, alterações ou um baralho temático inteiro, ou avisa das cartas que não fazem sentido. Tudo é revisto antes de entrar no jogo."],
+  edBtn: ["Editar mazos", "Editar barallas", "Editar baralhos"],
+  edTitle: ["Editor de mazos", "Editor de barallas", "Editor de baralhos"],
+  edIntro: ["Propón cartas nuevas, cambia o quita las que haya, o pide un mazo temático nuevo. Todo se envía junto para revisión y, si se aprueba, entra en el juego.", "Propón cartas novas, cambia ou quita as que haxa, ou pide unha baralla temática nova. Todo se envía xunto para revisión e, se se aproba, entra no xogo.", "Propõe cartas novas, altera ou retira as que existem, ou pede um baralho temático novo. Tudo é enviado junto para revisão e, se for aprovado, entra no jogo."],
+  edDeckLabel: ["Mazo", "Baralla", "Baralho"],
+  edNewDeck: ["+ Nuevo mazo", "+ Nova baralla", "+ Novo baralho"],
+  edNewName: ["Nombre del mazo", "Nome da baralla", "Nome do baralho"],
+  edNewDesc: ["De qué va (opcional)", "De que vai (opcional)", "De que se trata (opcional)"],
+  edBlacks: ["Negras", "Negras", "Pretas"],
+  edWhites: ["Blancas", "Brancas", "Brancas"],
+  edAddLabel: ["Añadir cartas", "Engadir cartas", "Adicionar cartas"],
+  edAddHintB: ["Una carta negra por línea, cada una con uno o dos huecos ___.", "Unha carta negra por liña, cada unha cun ou dous ocos ___.", "Uma carta preta por linha, cada uma com um ou dois espaços ___."],
+  edAddHintW: ["Una carta blanca por línea, sin huecos.", "Unha carta branca por liña, sen ocos.", "Uma carta branca por linha, sem espaços."],
+  edAddBtn: ["Añadir al borrador", "Engadir ao borrador", "Juntar ao rascunho"],
+  edBadLines: ["Estas líneas no valen y se han quedado en el cuadro: {l}", "Estas liñas non valen e quedaron no cadro: {l}", "Estas linhas não são válidas e ficaram na caixa: {l}"],
+  edExisting: ["Cartas del mazo", "Cartas da baralla", "Cartas do baralho"],
+  edSearch: ["Buscar en el mazo", "Buscar na baralla", "Procurar no baralho"],
+  edMore: ["Mostrando {n} de {t}. Busca para encontrar el resto.", "Amosando {n} de {t}. Busca para atopar o resto.", "A mostrar {n} de {t}. Procura para encontrar as restantes."],
+  edEdit: ["Editar", "Editar", "Editar"],
+  edDel: ["Quitar", "Quitar", "Retirar"],
+  edUndo: ["Deshacer", "Desfacer", "Anular"],
+  edWas: ["Antes", "Antes", "Antes"],
+  edSummary: ["Borrador: {b} negras y {w} blancas nuevas, {e} editadas y {r} para quitar.", "Borrador: {b} negras e {w} brancas novas, {e} editadas e {r} para quitar.", "Rascunho: {b} pretas e {w} brancas novas, {e} editadas e {r} para retirar."],
+  edSend: ["Enviar para revisión", "Enviar para revisión", "Enviar para revisão"],
+  edNeedName: ["Ponle nombre al mazo nuevo.", "Ponlle nome á baralla nova.", "Dá um nome ao baralho novo."],
+  edEmpty: ["El borrador está vacío.", "O borrador está baleiro.", "O rascunho está vazio."],
+  edBadEdit: ["Revisa las cartas editadas: las negras necesitan uno o dos huecos ___ y las blancas no llevan.", "Revisa as cartas editadas: as negras precisan un ou dous ocos ___ e as brancas non levan.", "Revê as cartas editadas: as pretas precisam de um ou dois espaços ___ e as brancas não levam."],
+  edSwitchWarn: ["Tienes cartas editadas o para quitar en este mazo. Si cambias de mazo, se descartan. ¿Seguir?", "Tes cartas editadas ou para quitar nesta baralla. Se cambias de baralla, descártanse. Seguir?", "Tens cartas editadas ou para retirar neste baralho. Se mudares de baralho, são descartadas. Continuar?"],
+  edDone: ["¡Enviado! Se revisará y, si se aprueba, entrará en el juego.", "Enviado! Revisarase e, se se aproba, entrará no xogo.", "Enviado! Vai ser revisto e, se for aprovado, entra no jogo."],
+  edAgain: ["Seguir editando", "Seguir editando", "Continuar a editar"],
+  edNote: ["El borrador se guarda en este navegador hasta que lo envíes.", "O borrador gárdase neste navegador ata que o envíes.", "O rascunho fica guardado neste navegador até o enviares."],
+  edLangNote: ["Escribe en tu idioma; las traducciones se hacen al aprobarlas.", "Escribe no teu idioma; as traducións fanse ao aprobalas.", "Escreve na tua língua; as traduções fazem-se ao aprovar."],
+  edTooMany: ["Como mucho {n} cambios de cada tipo por envío.", "Como moito {n} cambios de cada tipo por envío.", "No máximo {n} alterações de cada tipo por envio."],
   fbSuggestBtn: ["Sugerir una carta", "Suxerir unha carta", "Sugerir uma carta"],
   fbReportBtn: ["Reportar una carta", "Reportar unha carta", "Reportar uma carta"],
   fbReportHere: ["Reportar una de estas cartas", "Reportar unha destas cartas", "Reportar uma destas cartas"],
@@ -1351,36 +1442,46 @@ const CAH_WHITE_T = [
 ];
 
 // Baraja "Sugerencias de jugadores": cartas sugeridas desde la web y aprobadas en GitHub.
-// Las añade .github/scripts/add-card.js al poner la etiqueta "aprobada" en el issue; no cambies estos marcadores.
+// Las añade .github/scripts/apply-cards.js al poner la etiqueta "aprobada" en el issue; no cambies estos marcadores.
+// Una carta retirada se queda como null en su sitio (los ids son posiciones y no deben moverse).
 const PLAYER_BLACK_T = [
 ];
 const PLAYER_WHITE_T = [
 ];
 
+// Mazos nuevos creados desde el editor de mazos (los añade apply-cards.js justo encima de esta línea)
+
 /* ---------- Barajas y mazo derivado ---------- */
 // Cada baraja aporta cartas negras y blancas. El id de una carta es su posición en las listas combinadas
-// (BLACK y WHITES), así que una baraja nueva se añade siempre al final de PACKS.
+// (BLACK y WHITES), así que una baraja nueva se añade siempre al final de PACKS. Las barajas creadas
+// desde el editor llevan su nombre y descripción (name, desc: [es, gl, pt]); las demás, en TX (pk_<id>).
 const PACKS = [
   { id: "eq", lists: ["BLACK_T", "WHITE_T"], black: BLACK_T, white: WHITE_T },
   { id: "cch", lists: ["CAH_BLACK_T", "CAH_WHITE_T"], black: CAH_BLACK_T, white: CAH_WHITE_T },
   { id: "jug", lists: ["PLAYER_BLACK_T", "PLAYER_WHITE_T"], black: PLAYER_BLACK_T, white: PLAYER_WHITE_T },
 ];
+const liveCount = rows => rows.filter(Boolean).length;
 // Barajas que se pueden elegir para jugar: las que tienen cartas negras y blancas (la de jugadores empieza vacía)
-const playablePacks = () => PACKS.filter(pk => pk.black.length && pk.white.length);
-// Barajas a las que se puede sugerir una carta (la primera, por defecto)
-const SUGGEST_DECKS = ["jug", "eq", "cch"];
+const playablePacks = () => PACKS.filter(pk => liveCount(pk.black) && liveCount(pk.white));
 const PACK_IDS = PACKS.map(pk => pk.id);
+// Barajas a las que van las cartas escritas en partida y las sugerencias sueltas (la primera, por defecto)
+const SUGGEST_DECKS = ["jug", ...PACK_IDS.filter(id => id !== "jug")];
+const packById = id => PACKS.find(pk => pk.id === id);
+const packName = pk => (pk.name ? pk.name[li()] || pk.name[0] : t("pk_" + pk.id));
+const packDesc = pk => (pk.name ? `${packName(pk)}: ${pk.desc ? pk.desc[li()] || pk.desc[0] : ""}` : t("pkd_" + pk.id));
 const DEFAULT_PACKS = ["eq"];
 const NW = NAMES.length * 2;            // los nombres (baraja del equipo) van dos veces para que salgan a menudo
-const WHITES = PACKS.flatMap(pk => pk.white.map((r, i) => ({ r, pk: pk.id, list: pk.lists[1], i })));
+const NO_CARD = ["", "", ""];
+const WHITES = PACKS.flatMap(pk => pk.white.map((r, i) => ({ r: r || NO_CARD, off: !r, pk: pk.id, list: pk.lists[1], i })));
 const WCOUNT = NW + WHITES.length;
 function W(id){ if (id < NW) return NAMES[id % NAMES.length] + "."; const w = WHITES[id - NW]; return w ? (w.r[li()] || w.r[0]) : ""; }
+const whiteOff = id => id >= NW && (!WHITES[id - NW] || WHITES[id - NW].off);   // retirada
 const packOfWhite = id => (id < NW ? "eq" : (WHITES[id - NW] || {}).pk);
-const BLACK = PACKS.flatMap(pk => pk.black.map((r, i) => ({ r, pk: pk.id, list: pk.lists[0], i, p: Math.max(1, (r[0].match(/___/g) || []).length), get t(){ return r[li()] || r[0]; } })));
+const BLACK = PACKS.flatMap(pk => pk.black.map((row, i) => { const r = row || NO_CARD; return { r, off: !row, pk: pk.id, list: pk.lists[0], i, p: Math.max(1, (r[0].match(/___/g) || []).length), get t(){ return r[li()] || r[0]; } }; }));
 // Barajas elegidas (cfg.pk de la partida o las del modo prueba); sin ninguna válida, la del equipo
 const packSet = ids => { const s = new Set((Array.isArray(ids) ? ids : []).filter(id => PACK_IDS.includes(id))); return s.size ? s : new Set(DEFAULT_PACKS); };
-const allWhiteIds = () => [...NAMES.keys(), ...WHITES.map((w, i) => NW + i)];   // sin repetir nombres
-const gameWhiteCount = st => { const sel = packSet(st.cfg.pk); let n = 0; for (let i = 0; i < WCOUNT; i++) if (sel.has(packOfWhite(i))) n++; return n; };
+const allWhiteIds = () => [...NAMES.keys(), ...WHITES.map((w, i) => NW + i).filter(id => !whiteOff(id))];   // sin repetir nombres ni retiradas
+const gameWhiteCount = st => { const sel = packSet(st.cfg.pk); let n = 0; for (let i = 0; i < WCOUNT; i++) if (sel.has(packOfWhite(i)) && !whiteOff(i)) n++; return n; };
 const BLANK = 1295;            // "zz": carta en blanco
 const MAX_PLAYERS = 20;
 const MIN_PLAYERS = 2;         // cliente + al menos una persona que le envíe propuestas
@@ -1585,7 +1686,7 @@ function poolWhite(st, extraUsed){
   st.pl.forEach(p => decList(p.h).forEach(c => used.add(c)));
   Object.values(st.sb || {}).forEach(s => decList(s[0]).forEach(c => used.add(c)));
   const sel = packSet(st.cfg.pk);
-  const pool = []; for (let i = 0; i < WCOUNT; i++) if (!used.has(i) && sel.has(packOfWhite(i))) pool.push(i);
+  const pool = []; for (let i = 0; i < WCOUNT; i++) if (!used.has(i) && sel.has(packOfWhite(i)) && !whiteOff(i)) pool.push(i);
   return shuffle(pool);
 }
 function refill(st, i, avoid){
@@ -1594,7 +1695,7 @@ function refill(st, i, avoid){
 }
 function drawBlack(st){
   const sel = packSet(st.cfg.pk);
-  const free = used => BLACK.map((b, i) => i).filter(i => sel.has(BLACK[i].pk) && !used.has(i));
+  const free = used => BLACK.map((b, i) => i).filter(i => sel.has(BLACK[i].pk) && !BLACK[i].off && !used.has(i));
   let pool = free(new Set(decList(st.ub)));
   if (!pool.length) { st.ub = ""; pool = free(new Set()); }
   const b = pool[Math.floor(Math.random() * pool.length)]; st.ub += enc(b); return b;
@@ -1929,6 +2030,7 @@ function setLang(l){
   applyStatic(); renderHome(); render();
   if (!$("#demo").hidden) demoShow();
   if (!$("#practice").hidden) prRender();
+  if (!$("#editor").hidden) edRender();
   if ($("#fbDlg").open) fbRender();
 }
 function homeError(msg){ const e = $("#homeErr"); e.textContent = msg; e.hidden = !msg; }
@@ -1971,7 +2073,7 @@ function phaseLabel(st){
 }
 function render(){
   const inGame = !!S.nroom;
-  if ($("#demo").hidden && $("#practice").hidden) { $("#home").hidden = inGame; }
+  if ($("#demo").hidden && $("#practice").hidden && $("#editor").hidden) { $("#home").hidden = inGame; }
   $("#game").hidden = !inGame;
   if (!inGame) { renderHome(); return; }
   const st = S.st;
@@ -2003,9 +2105,9 @@ const clientLine = (st, me) => { const cz = st.pl[st.cz]; return `<div class="ro
 // Selector de barajas (act vacío = solo lectura)
 function packsHTML(sel, act){
   const chips = playablePacks().map(pk => act
-    ? `<button type="button" class="chip" data-act="${act}" data-p="${pk.id}" aria-pressed="${sel.has(pk.id)}">${esc(t("pk_" + pk.id))}</button>`
-    : (sel.has(pk.id) ? `<span class="chip" aria-pressed="true">${esc(t("pk_" + pk.id))}</span>` : "")).join("");
-  return `<div class="seg"><span class="label">${esc(t("packsLabel"))}</span><div class="chips">${chips}</div><p class="hint">${esc(PACK_IDS.filter(id => sel.has(id)).map(id => t("pkd_" + id)).join(" "))}</p></div>`;
+    ? `<button type="button" class="chip" data-act="${act}" data-p="${pk.id}" aria-pressed="${sel.has(pk.id)}">${esc(packName(pk))}</button>`
+    : (sel.has(pk.id) ? `<span class="chip" aria-pressed="true">${esc(packName(pk))}</span>` : "")).join("");
+  return `<div class="seg"><span class="label">${esc(t("packsLabel"))}</span><div class="chips">${chips}</div><p class="hint">${esc(PACKS.filter(pk => sel.has(pk.id)).map(packDesc).join(" "))}</p></div>`;
 }
 function renderLobby(st){
   const seats = activeSeats(st); const n = seats.length;
@@ -2149,7 +2251,7 @@ function renderBoard(st){
 
 /* ---------- Demo: partida de ejemplo ---------- */
 const bi = es => BLACK.findIndex(b => b.r[0] === es);
-const wi = es => { const k = WHITE_T.findIndex(r => r[0] === es); return k < 0 ? -1 : NW + k; };
+const wi = es => { const k = WHITE_T.findIndex(r => r && r[0] === es); return k < 0 ? -1 : NW + k; };   // r = null: carta retirada
 const HERO_W = wi("Un PoC que lleva tres años en producción.");
 const DP = ["Vane", "Jorge", "María", "Jesús"];
 const DAV = { "Vane": "📋", "Jorge": "💪", "María": "🎤", "Jesús": "🎉" };
@@ -2266,7 +2368,11 @@ function prTogglePack(id){
   PR.bDeck = []; PR.wDeck = []; PR.hand = []; prDraw(); prRender();
 }
 function prDraw(){
-  if (!PR.bDeck.length) { const sel = prPacks(); PR.bDeck = shuffle(BLACK.map((b, i) => i).filter(i => i !== PR.bk && sel.has(BLACK[i].pk))); }
+  if (!PR.bDeck.length) {
+    const sel = prPacks(); const all = BLACK.map((b, i) => i).filter(i => sel.has(BLACK[i].pk) && !BLACK[i].off);
+    const others = all.filter(i => i !== PR.bk);
+    PR.bDeck = shuffle(others.length ? others : all);   // con una sola carta negra, se repite
+  }
   PR.bk = PR.bDeck.pop();
   if (PR.wDeck.length < PR_HAND) PR.wDeck = shuffle(prWhiteIds().filter(id => !PR.wDeck.includes(id) && !PR.hand.includes(id))).concat(PR.wDeck);
   PR.hand = PR.wDeck.splice(-PR_HAND);
@@ -2315,7 +2421,7 @@ function fbRef(color, id){
   return { color, list: WHITES[id - NW].list, i: WHITES[id - NW].i, id };
 }
 const fbText = c => (c.color === "black" ? BLACK[c.id].t : W(c.id));
-const fbAll = () => [...BLACK.map((b, i) => fbRef("black", i)), ...allWhiteIds().map(id => fbRef("white", id))];
+const fbAll = () => [...BLACK.map((b, i) => i).filter(i => !BLACK[i].off).map(i => fbRef("black", i)), ...allWhiteIds().map(id => fbRef("white", id))];
 // Las cartas que hay en pantalla (modo prueba o partida) para reportarlas sin buscarlas
 function fbContext(){
   if (!$("#practice").hidden && BLACK[PR.bk]) return [fbRef("black", PR.bk), ...PR.hand.map(id => fbRef("white", id))];
@@ -2356,11 +2462,14 @@ function fbRender(){
 }
 // Envía una carta escrita en la partida para valorarla; si el buzón no está activado, no pasa nada
 function fbQuiet(body){
-  try { fetch("api/feedback", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(Object.assign({ name: S.name || "", lang: LANG, hp: "" }, body)) }).catch(() => {}); } catch (e) {}
+  // Con los mazos que se usaban en la partida, para elegir después a cuál añadir la carta
+  const inUse = S.st ? PACKS.filter(pk => packSet(S.st.cfg.pk).has(pk.id)).map(pk => ({ id: pk.id, name: packName(pk) })) : [];
+  try { fetch("api/feedback", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(Object.assign({ name: S.name || "", lang: LANG, hp: "", inUse }, body)) }).catch(() => {}); } catch (e) {}
 }
 function fbError(msg){ const e = $("#fbErr"); e.textContent = msg; e.hidden = !msg; }
 function fbOpen(mode){
-  FB.mode = mode === "report" ? "report" : "suggest"; FB.ctx = fbContext(); FB.pick = null; FB.reason = "";
+  if (mode !== "report") { edOpen(); return; }   // sugerir cartas se hace desde el editor de mazos
+  FB.mode = "report"; FB.ctx = fbContext(); FB.pick = null; FB.reason = "";
   $("#fbSearch").value = ""; fbError("");
   $("#fbForm").hidden = false; $("#fbDone").hidden = true;
   const nm = $("#fbName"); if (!nm.value) nm.value = load("cxc:name") || "";
@@ -2402,6 +2511,110 @@ async function fbSend(){
     FB.sending = false; btn.disabled = false; btn.textContent = t("fbSend");
   }
 }
+/* ---------- Editor de mazos ---------- */
+// Borrador de cambios a un mazo existente o a uno nuevo. Se envía de una vez como un issue (api/feedback.js,
+// type "deck") y, al aprobarlo, .github/scripts/apply-cards.js aplica los cambios. Se guarda en el navegador.
+const ED_MAX = 60;   // como mucho, cartas nuevas de cada color, ediciones y retiradas por envío
+const edBlank = () => ({ deck: "jug", newName: "", newDesc: "", tab: "white", q: "", add: { black: [], white: [] }, edit: {}, remove: {} });
+let ED = (() => { const d = load("cxc:draft"); return d && typeof d === "object" && d.add && d.edit ? Object.assign(edBlank(), d) : edBlank(); })();
+const edSave = () => store("cxc:draft", ED);
+const edPack = () => (ED.deck === "new" ? null : packById(ED.deck) || null);
+const edNorm = s => String(s || "").replace(/\s+/g, " ").trim().replace(/_{2,}/g, "___").slice(0, 200);
+const edValid = (txt, black) => { const n = (txt.match(/___/g) || []).length; return txt.length >= 3 && (black ? n >= 1 && n <= 2 : n === 0); };
+function edRows(color){
+  const pk = edPack(); if (!pk) return [];
+  const list = pk.lists[color === "black" ? 0 : 1];
+  return (color === "black" ? pk.black : pk.white).map((r, i) => (r ? { key: list + ":" + i, list, i, text: r[li()] || r[0] } : null)).filter(Boolean);
+}
+const edChanges = () => ({ b: ED.add.black.length, w: ED.add.white.length, e: Object.keys(ED.edit).length, r: Object.keys(ED.remove).length });
+function edRowHTML(r){
+  const cls = "fb-opt " + (ED.tab === "black" ? "b" : "w");
+  if (ED.remove[r.key]) return `<li class="${cls} ed-off"><s>${esc(r.text)}</s><span class="ed-acts"><button type="button" class="linkbtn" data-act="ed-undo" data-key="${r.key}">${esc(t("edUndo"))}</button></span></li>`;
+  if (ED.edit[r.key] != null) return `<li class="${cls} ed-on"><textarea rows="2" maxlength="200" data-edit="${r.key}" aria-label="${esc(t("edEdit"))}">${esc(ED.edit[r.key])}</textarea><small>${esc(t("edWas"))}: ${esc(r.text)}</small><span class="ed-acts"><button type="button" class="linkbtn" data-act="ed-undo" data-key="${r.key}">${esc(t("edUndo"))}</button></span></li>`;
+  return `<li class="${cls}"><span>${esc(r.text)}</span><span class="ed-acts"><button type="button" class="linkbtn" data-act="ed-edit" data-key="${r.key}">${esc(t("edEdit"))}</button><button type="button" class="linkbtn" data-act="ed-del" data-key="${r.key}">${esc(t("edDel"))}</button></span></li>`;
+}
+function edSummary(){
+  const c = edChanges();
+  $("#edSummary").textContent = t("edSummary", c);
+  $("#edCount").textContent = ED.deck === "new" ? (ED.newName || t("edNewDeck")) : packName(edPack() || PACKS[0]);
+  $("#edSend").disabled = !(c.b + c.w + c.e + c.r);
+}
+function edRender(){
+  $("#edErr").hidden = true;   // los errores de envío desaparecen al seguir editando
+  setHTML($("#edDecks"), [...PACKS.map(pk => [pk.id, packName(pk)]), ["new", t("edNewDeck")]].map(([id, n]) => `<button type="button" data-act="ed-deck" data-d="${id}" aria-pressed="${ED.deck === id}">${esc(n)}</button>`).join(""));
+  $("#edNew").hidden = ED.deck !== "new";
+  if ($("#edNewName").value !== ED.newName) $("#edNewName").value = ED.newName;
+  if ($("#edNewDesc").value !== ED.newDesc) $("#edNewDesc").value = ED.newDesc;
+  const pk = edPack();
+  const count = c => (pk ? liveCount(c === "black" ? pk.black : pk.white) : 0) + ED.add[c].length;
+  setHTML($("#edTabs"), ["black", "white"].map(c => `<button type="button" data-act="ed-tab" data-c="${c}" aria-pressed="${ED.tab === c}">${esc(t(c === "black" ? "edBlacks" : "edWhites"))} · ${count(c)}</button>`).join(""));
+  $("#edAddHint").textContent = t(ED.tab === "black" ? "edAddHintB" : "edAddHintW");
+  setHTML($("#edAdded"), ED.add[ED.tab].map((x, k) => `<li class="fb-opt ${ED.tab === "black" ? "b" : "w"}"><span>${esc(x)}</span><span class="ed-acts"><button type="button" class="linkbtn" data-act="ed-unadd" data-k="${k}">${esc(t("edUndo"))}</button></span></li>`).join(""));
+  $("#edExisting").hidden = !pk;
+  if (pk) {
+    const q = fold(ED.q.trim()); let rows = edRows(ED.tab);
+    if (q) rows = rows.filter(r => fold(r.text).includes(q) || ED.edit[r.key] != null || ED.remove[r.key]);
+    const shown = rows.slice(0, 60);
+    setHTML($("#edList"), shown.map(edRowHTML).join("") || `<li class="hint">${esc(t("fbNoResults"))}</li>`);
+    $("#edMore").textContent = rows.length > shown.length ? t("edMore", { n: shown.length, t: rows.length }) : "";
+  }
+  edSummary();
+}
+function edOpen(){
+  $("#home").hidden = true; $("#editor").hidden = false; $("#edForm").hidden = false; $("#edDone").hidden = true;
+  const a = $("#edAuthor"); if (!a.value) a.value = load("cxc:name") || "";
+  $("#edSearch").value = ED.q; edRender(); window.scrollTo(0, 0); $("#edTitle").focus({ preventScroll: true });
+}
+function edClose(){
+  $("#editor").hidden = true;
+  if (!S.nroom) { $("#home").hidden = false; renderHome(); }
+  window.scrollTo(0, 0); $("#edBtn").focus({ preventScroll: true });
+}
+function edSetDeck(id){
+  if (id === ED.deck) return;
+  const c = edChanges();
+  if ((c.e || c.r) && !window.confirm(t("edSwitchWarn"))) return;
+  ED.deck = id === "new" || packById(id) ? id : "jug"; ED.edit = {}; ED.remove = {}; ED.q = ""; $("#edSearch").value = "";
+  edSave(); edRender();
+}
+function edAdd(){
+  const black = ED.tab === "black"; const box = $("#edAddIn"); const err = $("#edAddErr");
+  const lines = box.value.split("\n").map(edNorm).filter(Boolean);
+  const ok = lines.filter(x => edValid(x, black)); const bad = lines.filter(x => !edValid(x, black));
+  const list = ED.add[ED.tab];
+  for (const x of ok) if (!list.includes(x) && list.length < ED_MAX) list.push(x);
+  box.value = bad.join("\n");
+  err.textContent = bad.length ? t("edBadLines", { l: bad.map(x => `"${x}"`).join(", ") }) : ""; err.hidden = !bad.length;
+  edSave(); edRender();
+}
+async function edSend(){
+  const err = m => { const e = $("#edErr"); e.textContent = m; e.hidden = !m; };
+  const pk = edPack(); const c = edChanges();
+  if (ED.deck === "new" && edNorm(ED.newName).length < 3) { err(t("edNeedName")); $("#edNewName").focus(); return; }
+  if (!(c.b + c.w + c.e + c.r)) { err(t("edEmpty")); return; }
+  if (c.b > ED_MAX || c.w > ED_MAX || c.e > ED_MAX || c.r > ED_MAX) { err(t("edTooMany", { n: ED_MAX })); return; }
+  const rows = pk ? [...edRows("black"), ...edRows("white")] : [];
+  const byKey = new Map(rows.map(r => [r.key, r]));
+  const edit = [], remove = [];
+  for (const [k, v] of Object.entries(ED.edit)) {
+    const r = byKey.get(k); if (!r) continue;
+    const to = edNorm(v); if (to === r.text) continue;
+    if (!edValid(to, r.list === pk.lists[0])) { err(t("edBadEdit")); return; }
+    edit.push({ list: r.list, i: r.i, from: r.text, to });
+  }
+  for (const k of Object.keys(ED.remove)) { const r = byKey.get(k); if (r) remove.push({ list: r.list, i: r.i, text: r.text }); }
+  const body = { type: "deck", deck: ED.deck, deckName: pk ? packName(pk) : "", name: edNorm(ED.newName).slice(0, 40), desc: edNorm(ED.newDesc).slice(0, 160),
+    black: ED.add.black, white: ED.add.white, edit, remove, author: cleanText($("#edAuthor").value, 40), lang: LANG, hp: $("#edHp").value };
+  err(""); const btn = $("#edSend"); btn.disabled = true; btn.textContent = t("fbSending");
+  try {
+    const r = await fetch("api/feedback", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+    if (!r.ok) throw r.status;
+    ED = Object.assign(edBlank(), { deck: ED.deck === "new" ? "jug" : ED.deck, tab: ED.tab }); edSave();
+    $("#edForm").hidden = true; $("#edDone").hidden = false; window.scrollTo(0, 0);
+  } catch (e) {
+    err(t(e === 404 || e === 405 || e === 503 ? "fbErrOff" : e === 429 ? "fbErrRate" : "fbErrSend"));
+  } finally { btn.textContent = t("edSend"); edSummary(); }
+}
 function prClose(){
   $("#practice").hidden = true;
   if (!S.nroom) { $("#home").hidden = false; renderHome(); }
@@ -2431,6 +2644,10 @@ function bind(){
   $("#remoBtn").addEventListener("click", remo);
   $("#fbText").addEventListener("input", () => { fbError(""); fbRender(); });
   $("#fbSearch").addEventListener("input", fbRender);
+  $("#edSearch").addEventListener("input", e => { ED.q = e.target.value; edRender(); });
+  $("#edNewName").addEventListener("input", e => { ED.newName = e.target.value; edSave(); edSummary(); });
+  $("#edNewDesc").addEventListener("input", e => { ED.newDesc = e.target.value; edSave(); });
+  $("#edList").addEventListener("input", e => { const k = e.target.dataset && e.target.dataset.edit; if (k) { ED.edit[k] = e.target.value; edSave(); edSummary(); } });
   $("#nbText").addEventListener("input", () => { $("#nbErr").hidden = true; nbRender(); });
   $("#blankIn").addEventListener("input", e => { S.blankText = e.target.value.slice(0, 60); renderPreview(); });
   document.addEventListener("click", e => {
@@ -2464,6 +2681,17 @@ function bind(){
     else if (a === "fb-send") fbSend();
     else if (a === "fb-again") { $("#fbDone").hidden = true; $("#fbForm").hidden = false; fbRender(); }
     else if (a === "pr-open") prOpen();
+    else if (a === "ed-open") edOpen();
+    else if (a === "ed-close") edClose();
+    else if (a === "ed-deck") edSetDeck(el.dataset.d);
+    else if (a === "ed-tab") { ED.tab = el.dataset.c === "black" ? "black" : "white"; $("#edAddErr").hidden = true; edSave(); edRender(); }
+    else if (a === "ed-add") edAdd();
+    else if (a === "ed-unadd") { ED.add[ED.tab].splice(Number(el.dataset.k), 1); edSave(); edRender(); }
+    else if (a === "ed-edit") { const r = edRows(ED.tab).find(x => x.key === el.dataset.key); if (r) { ED.edit[r.key] = r.text; edSave(); edRender(); const ta = document.querySelector(`[data-edit="${r.key}"]`); if (ta) ta.focus(); } }
+    else if (a === "ed-del") { ED.remove[el.dataset.key] = 1; delete ED.edit[el.dataset.key]; edSave(); edRender(); }
+    else if (a === "ed-undo") { delete ED.edit[el.dataset.key]; delete ED.remove[el.dataset.key]; edSave(); edRender(); }
+    else if (a === "ed-send") edSend();
+    else if (a === "ed-again") { $("#edDone").hidden = true; $("#edForm").hidden = false; edRender(); }
     else if (a === "conn") { store("cxc:conn", el.dataset.v === "p2p" ? "p2p" : "srv"); renderConn(); }
     else if (a === "pr-pack") prTogglePack(el.dataset.p);
     else if (a === "pack") hostDo("pack", el.dataset.p);
