@@ -1353,7 +1353,10 @@ const BLANK = 1295;            // "zz": carta en blanco
 const MAX_PLAYERS = 20;
 const MIN_PLAYERS = 2;         // cliente + al menos una persona que le envíe propuestas
 const RES_MS = 9000;           // tiempo mostrando el ganador
-const TAKEOVER_MS = 8000;      // sin anfitrión durante este tiempo -> otro toma el relevo
+const TAKEOVER_MS = 10000;     // sin anfitrión durante este tiempo -> otro toma el relevo
+const HB_MS = 4000;            // latido del anfitrión: cada jugador repite el último que ha visto (hs)
+// El latido es [época, n]; "a" es más nuevo que "b" si es de una época mayor o tiene un n mayor
+const hbNewer = (a, b) => Array.isArray(a) && a.length === 2 && (!Array.isArray(b) || a[0] > b[0] || (a[0] === b[0] && a[1] > b[1]));
 const KEEP = new Set(NAMES.flatMap(n => n.split(" ")).concat(["Kubernetes", "Jira", "Vigo", "Portugal", "Pokémon", "Taylor", "ChatGPT", "LinkedIn", "YouTube", "Excel", "Kafka", "Oviedo", "España", "Espanha", "Dockerfile",
   "Tom", "Kanye", "Sean", "Nickelback", "Nicolas", "Hulk", "Darth", "Robert", "Christopher", "Lady", "Don", "Batman", "Picasso", "Harry", "Shaquille", "Morgan"]));
 
@@ -1530,7 +1533,7 @@ function publish(){
 function becomeHost(base){
   const st = clone(base);
   st.ep = (st.ep || 0) + 1; st.h = S.me.key;
-  S.st = st; S.isHost = true; S.stale = false; S.hostGoneAt = 0; S.czarGoneAt = 0;
+  S.st = st; S.isHost = true; S.stale = false; S.hostGoneAt = 0; S.czarGoneAt = 0; S.hbAt = 0;
   if (st.ph === "res") S.resAt = Date.now() - RES_MS + 4000;
   publish(); hostSync();
 }
@@ -1688,8 +1691,13 @@ function onGamePeers(ch){
   let best = null;
   for (const p of peers) { if (p.sameTab || p.kind !== "viewer") continue; const st = p.presence && p.presence.st; if (validState(st) && cmp(st, best) > 0) best = st; }
   if (best) S.hostGoneAt = 0;
+  // Repite el latido del anfitrión que vemos: así quien no lo vea sabe que sigue ahí
+  if (!S.isHost) for (const p of peers) {
+    if (p.sameTab || !p.presence || p.presence.st !== best) continue;
+    if (hbNewer(p.presence.hb, S.hbSeen)) { S.hbSeen = p.presence.hb; setMyPres({ hs: p.presence.hb }); }
+  }
   if (S.isHost) {
-    if (best && cmp(best, S.st) > 0) { S.isHost = false; setMyPres({ st: null }); adopt(best); advertise(); }
+    if (best && cmp(best, S.st) > 0) { S.isHost = false; setMyPres({ st: null, hb: null }); adopt(best); advertise(); }
   } else if (best && (S.stale || cmp(best, S.st) >= 0)) { S.stale = false; adopt(best); }
   if (S.isHost) hostSync();
   render();
@@ -1698,6 +1706,11 @@ function electionTick(){
   if (S.isHost || !S.nroom || !S.st) return;
   const peers = S.nroom.peers();
   if (peers.some(p => !p.sameTab && p.presence && validState(p.presence.st))) { S.hostGoneAt = 0; return; }
+  const others = peers.filter(p => !p.sameTab && p.kind === "viewer");
+  // Si otro jugador ha visto un latido más reciente que el nuestro, el anfitrión sigue vivo: solo lo hemos perdido nosotros
+  if (others.some(p => p.presence && hbNewer(p.presence.hs, S.hbSeen))) { S.hostGoneAt = 0; return; }
+  // Recién llegados con la partida guardada (antigua): no toman el relevo mientras haya más gente en la sala
+  if (S.stale && others.length) { S.hostGoneAt = 0; return; }
   if (!S.hostGoneAt) { S.hostGoneAt = Date.now(); return; }
   if (Date.now() - S.hostGoneAt < TAKEOVER_MS) return;
   const st = S.st;
@@ -1712,6 +1725,7 @@ function electionTick(){
 }
 function tick(){
   if (!S.nroom) return;
+  if (S.isHost && S.st && Date.now() - (S.hbAt || 0) >= HB_MS) { S.hbAt = Date.now(); S.hbN = (S.hbN || 0) + 1; setMyPres({ hb: [S.st.ep, S.hbN] }); }
   if (S.isHost) hostSync(); else electionTick();
   if (!S.st && S.mode === "join" && Date.now() - S.joinAt > 12000) S.notFound = true;
   render();
@@ -1734,7 +1748,7 @@ async function enterRoom(code, name, mode){
   let nr;
   try { nr = await S.room.join("cxc-" + code.toLowerCase()); }
   catch (e) { homeError(joinErrorText(e)); return; }
-  Object.assign(S, { nroom: nr, code, name, mode, st: null, isHost: false, stale: false, myPres: {}, sel: [], blankText: "", pickIdx: -1, hostGoneAt: 0, czarGoneAt: 0, resAt: 0, joinAt: Date.now(), notFound: false, err: "" });
+  Object.assign(S, { nroom: nr, code, name, mode, st: null, isHost: false, stale: false, myPres: {}, sel: [], blankText: "", pickIdx: -1, hostGoneAt: 0, czarGoneAt: 0, resAt: 0, joinAt: Date.now(), notFound: false, err: "", hbSeen: null, hbAt: 0, hbN: 0 });
   const mine = nr.peers().find(p => p.sameTab);
   if (mine) S.me = { peer: mine.peer, by: mine.by, key: keyOf(mine) };
   S.unsubGame = nr.onPeers(onGamePeers, () => { S.err = "lost"; render(); });
