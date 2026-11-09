@@ -1,0 +1,52 @@
+name: Añadir carta aprobada
+
+# Al poner la etiqueta "aprobada" en un issue de sugerencia, añade la carta al juego,
+# publica el cambio en main, comenta y cierra el issue.
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: cartas-aprobadas
+  cancel-in-progress: false
+
+jobs:
+  add:
+    if: github.event.label.name == 'aprobada' && contains(github.event.issue.labels.*.name, 'sugerencia')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - id: card
+        run: node .github/scripts/add-card.js
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+
+      - if: steps.card.outputs.added == 'true'
+        env:
+          COMMIT_MSG: ${{ steps.card.outputs.commit }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "$COMMIT_MSG"
+          git pull --rebase origin main
+          git push origin HEAD:main
+
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          N: ${{ github.event.issue.number }}
+          MSG: ${{ steps.card.outputs.message }}
+          ADDED: ${{ steps.card.outputs.added }}
+        run: |
+          gh issue comment "$N" --repo "$GITHUB_REPOSITORY" --body "$MSG"
+          if [ "$ADDED" = "true" ]; then
+            gh issue edit "$N" --repo "$GITHUB_REPOSITORY" --add-label "pendiente-de-traducir" || true
+            gh issue close "$N" --repo "$GITHUB_REPOSITORY" --reason completed
+          fi

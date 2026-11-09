@@ -536,6 +536,7 @@ button.fb-opt:hover{outline:2px solid var(--accent);outline-offset:2px}
             <button type="button" data-act="fb-color" data-c="black" data-i18n="fbBlack">Negra</button>
             <button type="button" data-act="fb-color" data-c="white" data-i18n="fbWhite">Blanca</button>
           </div></div>
+          <div class="seg"><span class="label" data-i18n="fbDeckLabel">Baraja</span><div class="opts" id="fbDecks"></div></div>
           <label for="fbText" data-i18n="fbTextLabel">Texto de la carta</label>
           <textarea id="fbText" rows="3" maxlength="200"></textarea>
           <p class="hint" id="fbTextHint"></p>
@@ -1062,6 +1063,9 @@ const TX = {
   pk_eq: ["Equipo", "Equipo", "Equipa"],
   pk_cch: ["Cartas contra la Humanidad", "Cartas contra a Humanidade", "Cartas contra a Humanidade"],
   pkd_eq: ["Equipo: las cartas del equipo de AI & Data Ops.", "Equipo: as cartas do equipo de AI & Data Ops.", "Equipa: as cartas da equipa de AI & Data Ops."],
+  pk_jug: ["Sugerencias de jugadores", "Suxestións de xogadores", "Sugestões dos jogadores"],
+  pkd_jug: ["Sugerencias de jugadores: cartas propuestas por el equipo y aprobadas.", "Suxestións de xogadores: cartas propostas polo equipo e aprobadas.", "Sugestões dos jogadores: cartas propostas pela equipa e aprovadas."],
+  fbDeckLabel: ["Baraja", "Baralla", "Baralho"],
   pkd_cch: ["Cartas contra la Humanidad: selección del juego original Cards Against Humanity, traducida (licencia CC BY-NC-SA 2.0). Humor más bruto.", "Cartas contra a Humanidade: selección do xogo orixinal Cards Against Humanity, traducida (licenza CC BY-NC-SA 2.0). Humor máis bruto.", "Cartas contra a Humanidade: seleção do jogo original Cards Against Humanity, traduzida (licença CC BY-NC-SA 2.0). Humor mais bruto."],
   ptsToWin: ["Puntos para ganar", "Puntos para gañar", "Pontos para ganhar"],
   nbPer: ["Cartas negras propias por persona", "Cartas negras propias por persoa", "Cartas pretas próprias por pessoa"],
@@ -1341,13 +1345,25 @@ const CAH_WHITE_T = [
 ["Lady Gaga.", "Lady Gaga.", "Lady Gaga."]
 ];
 
+// Baraja "Sugerencias de jugadores": cartas sugeridas desde la web y aprobadas en GitHub.
+// Las añade .github/scripts/add-card.js al poner la etiqueta "aprobada" en el issue; no cambies estos marcadores.
+const PLAYER_BLACK_T = [
+];
+const PLAYER_WHITE_T = [
+];
+
 /* ---------- Barajas y mazo derivado ---------- */
 // Cada baraja aporta cartas negras y blancas. El id de una carta es su posición en las listas combinadas
 // (BLACK y WHITES), así que una baraja nueva se añade siempre al final de PACKS.
 const PACKS = [
   { id: "eq", lists: ["BLACK_T", "WHITE_T"], black: BLACK_T, white: WHITE_T },
   { id: "cch", lists: ["CAH_BLACK_T", "CAH_WHITE_T"], black: CAH_BLACK_T, white: CAH_WHITE_T },
+  { id: "jug", lists: ["PLAYER_BLACK_T", "PLAYER_WHITE_T"], black: PLAYER_BLACK_T, white: PLAYER_WHITE_T },
 ];
+// Barajas que se pueden elegir para jugar: las que tienen cartas negras y blancas (la de jugadores empieza vacía)
+const playablePacks = () => PACKS.filter(pk => pk.black.length && pk.white.length);
+// Barajas a las que se puede sugerir una carta (la primera, por defecto)
+const SUGGEST_DECKS = ["jug", "eq", "cch"];
 const PACK_IDS = PACKS.map(pk => pk.id);
 const DEFAULT_PACKS = ["eq"];
 const NW = NAMES.length * 2;            // los nombres (baraja del equipo) van dos veces para que salgan a menudo
@@ -1981,7 +1997,7 @@ const youTag = () => ` <span class="tag">${esc(t("you"))}</span>`;
 const clientLine = (st, me) => { const cz = st.pl[st.cz]; return `<div class="roundline"><span class="r">${esc(t("round", { r: st.r }))}</span><span>${esc(t("client"))} ${cz ? avHTML(cz, "xs") + " " : ""}<b>${esc(cz ? cz.n : "—")}</b>${me >= 0 && st.cz === me ? esc(t("youParen")) : ""}</span></div>`; };
 // Selector de barajas (act vacío = solo lectura)
 function packsHTML(sel, act){
-  const chips = PACKS.map(pk => act
+  const chips = playablePacks().map(pk => act
     ? `<button type="button" class="chip" data-act="${act}" data-p="${pk.id}" aria-pressed="${sel.has(pk.id)}">${esc(t("pk_" + pk.id))}</button>`
     : (sel.has(pk.id) ? `<span class="chip" aria-pressed="true">${esc(t("pk_" + pk.id))}</span>` : "")).join("");
   return `<div class="seg"><span class="label">${esc(t("packsLabel"))}</span><div class="chips">${chips}</div><p class="hint">${esc(PACK_IDS.filter(id => sel.has(id)).map(id => t("pkd_" + id)).join(" "))}</p></div>`;
@@ -2284,7 +2300,7 @@ function prOpen(){
   prRender(); window.scrollTo(0, 0); $("#prTitle").focus({ preventScroll: true });
 }
 /* ---------- Sugerencias y reportes de cartas (los recibe api/feedback.js) ---------- */
-const FB = { mode: "suggest", color: "white", ctx: [], list: [], pick: null, reason: "", sending: false };
+const FB = { mode: "suggest", color: "white", deck: SUGGEST_DECKS[0], ctx: [], list: [], pick: null, reason: "", sending: false };
 const FB_REASONS = ["nonsense", "dislike", "translation", "other"];
 const fold = s => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 // Una carta como { color, list, i, id }: list/i dicen dónde está en el código; id es el del juego para pintarla
@@ -2316,6 +2332,7 @@ function fbRender(){
   if (sug) {
     document.querySelectorAll("#fbDlg [data-act=fb-color]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.c === FB.color)));
     $("#fbTextHint").textContent = t(FB.color === "black" ? "fbHintBlack" : "fbHintWhite");
+    setHTML($("#fbDecks"), SUGGEST_DECKS.map(d => `<button type="button" data-act="fb-deck" data-d="${d}" aria-pressed="${d === FB.deck}">${esc(t("pk_" + d))}</button>`).join(""));
     const txt = $("#fbText").value.trim().replace(/_{2,}/g, "___");
     const blk = { t: txt, p: Math.max(1, (txt.match(/___/g) || []).length) };
     setHTML($("#fbPreview"), !txt ? "" : FB.color === "black" ? blackCard(blk, false) : `<div class="card white" style="min-height:0;padding-bottom:16px">${esc(txt)}</div>`);
@@ -2357,7 +2374,7 @@ async function fbSend(){
     if (text.length < 3) { fbError(t("fbEmpty")); $("#fbText").focus(); return; }
     if (FB.color === "black" && (n < 1 || n > 2)) { fbError(t("fbNeedBlank")); $("#fbText").focus(); return; }
     if (FB.color === "white" && n) { fbError(t("fbNoBlank")); $("#fbText").focus(); return; }
-    body = { type: "suggest", color: FB.color, text };
+    body = { type: "suggest", color: FB.color, text, deck: FB.deck };
   } else {
     if (!FB.pick) { fbError(t("fbPick")); return; }
     if (!FB.reason) { fbError(t("fbPickReason")); return; }
@@ -2435,6 +2452,7 @@ function bind(){
     else if (a === "fb-close") fbClose();
     else if (a === "fb-mode") { FB.mode = el.dataset.mode; fbError(""); fbRender(); }
     else if (a === "fb-color") { FB.color = el.dataset.c; fbError(""); fbRender(); }
+    else if (a === "fb-deck") { FB.deck = SUGGEST_DECKS.includes(el.dataset.d) ? el.dataset.d : SUGGEST_DECKS[0]; fbRender(); }
     else if (a === "fb-pick") { FB.pick = FB.list[Number(el.dataset.k)] || null; fbError(""); fbRender(); }
     else if (a === "fb-unpick") { FB.pick = null; fbRender(); $("#fbSearch").focus(); }
     else if (a === "fb-reason") { FB.reason = el.dataset.r; fbError(""); fbRender(); }
