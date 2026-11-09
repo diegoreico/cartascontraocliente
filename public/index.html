@@ -366,6 +366,7 @@ button.fb-opt:hover{outline:2px solid var(--accent);outline-offset:2px}
         <div class="panel">
           <h2 data-i18n="createTitle">Crear una sala</h2>
           <p class="hint" data-i18n="createHint">Te da un código de cuatro letras para compartir con el resto.</p>
+          <div id="connBox" class="seg" hidden></div>
           <button id="createBtn" class="btn" type="button" data-i18n="createBtn">Crear sala</button>
         </div>
         <div class="panel">
@@ -1038,6 +1039,13 @@ const TX = {
   connecting: ["Conectando…", "Conectando…", "A ligar…"],
   notFound: ["No hay ninguna partida abierta con el código {c}. Revisa el código o sal y crea una sala nueva.", "Non hai ningunha partida aberta co código {c}. Revisa o código ou sae e crea unha sala nova.", "Não há nenhum jogo aberto com o código {c}. Confirma o código ou sai e cria uma sala nova."],
   connectingRoom: ["Conectando con la sala…", "Conectando coa sala…", "A ligar à sala…"],
+  connLabel: ["Conexión", "Conexión", "Ligação"],
+  connSrv: ["Servidor", "Servidor", "Servidor"],
+  connP2p: ["Directa (P2P)", "Directa (P2P)", "Direta (P2P)"],
+  connSrvHint: ["Recomendada: estable con mucha gente y desde redes distintas. Si nadie ha jugado en un rato, tarda cerca de un minuto en arrancar.", "Recomendada: estable con moita xente e dende redes distintas. Se ninguén xogou nun anaco, tarda preto dun minuto en arrancar.", "Recomendada: estável com muita gente e a partir de redes diferentes. Se ninguém jogou há algum tempo, demora cerca de um minuto a arrancar."],
+  connP2pHint: ["Los navegadores se conectan entre sí, sin esperar al servidor. Bien para grupos pequeños en la misma red; con mucha gente o redes distintas puede fallar. Los códigos de estas salas empiezan por P.", "Os navegadores conéctanse entre si, sen agardar polo servidor. Ben para grupos pequenos na mesma rede; con moita xente ou redes distintas pode fallar. Os códigos destas salas comezan por P.", "Os navegadores ligam-se entre si, sem esperar pelo servidor. Bom para grupos pequenos na mesma rede; com muita gente ou redes diferentes pode falhar. Os códigos destas salas começam por P."],
+  lobbyConnSrv: ["Esta partida va por el servidor.", "Esta partida vai polo servidor.", "Este jogo passa pelo servidor."],
+  lobbyConnP2p: ["Esta partida va con conexión directa entre navegadores (P2P).", "Esta partida vai con conexión directa entre navegadores (P2P).", "Este jogo usa ligação direta entre navegadores (P2P)."],
   srvWake: ["Arrancando el servidor del juego… Si nadie ha jugado en un rato, puede tardar cerca de un minuto. Mientras, puedes ir poniendo tu nombre y crear o entrar en una sala.", "Arrancando o servidor do xogo… Se ninguén xogou nun anaco, pode tardar preto dun minuto. Mentres, podes ir poñendo o teu nome e crear ou entrar nunha sala.", "A arrancar o servidor do jogo… Se ninguém jogou há algum tempo, pode demorar cerca de um minuto. Entretanto, podes ir escrevendo o teu nome e criar ou entrar numa sala."],
   srvWakeRoom: ["Preparando el servidor para la sala… Si llevaba un rato sin usarse, puede tardar cerca de un minuto.", "Preparando o servidor para a sala… Se levaba un anaco sen usarse, pode tardar preto dun minuto.", "A preparar o servidor para a sala… Se não era usado há algum tempo, pode demorar cerca de um minuto."],
   stale: ["Buscando a quien lleva la partida…", "Buscando a quen leva a partida…", "À procura de quem gere o jogo…"],
@@ -1743,7 +1751,26 @@ function tick(){
 }
 
 /* ---------- Entrar y salir ---------- */
-function genCode(){ const A = "ABCDEFGHJKLMNPQRSTUVWXYZ"; let c = ""; for (let i = 0; i < 4; i++) c += A[Math.floor(Math.random() * A.length)]; return c; }
+// Con servidor configurado, el código dice cómo se conecta la sala: los de conexión directa (P2P) empiezan por P
+// y el resto van por el servidor. Así quien entra con el código no tiene que elegir nada.
+const P2P_PREFIX = "P";
+const isP2PCode = code => !serverUrl() || String(code).toUpperCase().startsWith(P2P_PREFIX);
+function genCode(p2p){
+  const A = "ABCDEFGHJKLMNPQRSTUVWXYZ"; const first = A.replace(P2P_PREFIX, "");
+  const pick = s => s[Math.floor(Math.random() * s.length)];
+  let c = p2p && serverUrl() ? P2P_PREFIX : pick(first);
+  while (c.length < 4) c += pick(A);
+  return c;
+}
+// Conexión elegida para crear salas (solo si hay servidor): "srv" o "p2p"
+const connMode = () => (serverUrl() && load("cxc:conn") === "p2p" ? "p2p" : "srv");
+// Sala de conexión directa para partidas con código P…, aunque la página use el servidor (se crea al necesitarla)
+let p2pExtra = null;
+function p2pRooms(){
+  if (!p2pExtra) p2pExtra = import("./vendor/trystero.mjs").then(lib => createP2pRoom(lib, false)).catch(e => { p2pExtra = null; throw e; });
+  return p2pExtra;
+}
+async function roomFor(code){ return serverUrl() && isP2PCode(code) ? p2pRooms() : S.room; }
 function joinErrorText(e){
   const c = e && e.code;
   if (c === "not_permitted") return t("errNotPermitted");
@@ -1757,8 +1784,9 @@ async function enterRoom(code, name, mode){
   if (!name) { homeError(t("errName")); $("#nameIn").focus(); return; }
   homeError("");
   let nr;
-  if (S.online === false) toast(t("srvWakeRoom"));
-  try { nr = await S.room.join("cxc-" + code.toLowerCase()); }
+  const viaServer = !!serverUrl() && !isP2PCode(code);
+  if (viaServer && S.online === false) toast(t("srvWakeRoom"));
+  try { nr = await (await roomFor(code)).join("cxc-" + code.toLowerCase()); }
   catch (e) { homeError(joinErrorText(e)); return; }
   Object.assign(S, { nroom: nr, code, name, mode, st: null, isHost: false, stale: false, myPres: {}, sel: [], blankText: "", pickIdx: -1, hostGoneAt: 0, czarGoneAt: 0, resAt: 0, joinAt: Date.now(), notFound: false, err: "", hbSeen: null, hbAt: 0, hbN: 0 });
   const mine = nr.peers().find(p => p.sameTab);
@@ -1772,7 +1800,7 @@ async function enterRoom(code, name, mode){
     await waitFor(() => !!S.me.key, 4000);
     await sleep(900);
     const taken = nr.peers().some(p => !p.sameTab && p.presence && p.presence.st);
-    if (taken) { await leaveRoom(true); return enterRoom(genCode(), name, "create"); }
+    if (taken) { await leaveRoom(true); return enterRoom(genCode(isP2PCode(code)), name, "create"); }
     S.st = newState(code); S.isHost = true; publish(); hostSync();
   } else {
     const saved = load("cxc:st:" + code);
@@ -1883,7 +1911,14 @@ function setLang(l){
   if ($("#fbDlg").open) fbRender();
 }
 function homeError(msg){ const e = $("#homeErr"); e.textContent = msg; e.hidden = !msg; }
+function renderConn(){
+  const box = $("#connBox"); if (!box) return;
+  box.hidden = !serverUrl(); if (box.hidden) return;
+  const m = connMode();
+  setHTML(box, `<span class="label">${esc(t("connLabel"))}</span><div class="opts">${[["srv", "connSrv"], ["p2p", "connP2p"]].map(([v, k]) => `<button type="button" data-act="conn" data-v="${v}" aria-pressed="${m === v}">${esc(t(k))}</button>`).join("")}</div><p class="hint">${esc(t(m === "p2p" ? "connP2pHint" : "connSrvHint"))}</p>`);
+}
 function renderHome(){
+  renderConn();
   const name = $("#nameIn").value.trim();
   setHTML($("#nameChips"), NAMES.map(n => `<button type="button" class="chip" data-act="chip" data-name="${esc(n)}" aria-pressed="${n === name}">${esc(n)}</button>`).join(""));
   const av = cleanAvatar($("#avIn").value); const shown = av || initials(name || "?");
@@ -1923,7 +1958,7 @@ function render(){
   $("#tbPhase").textContent = phaseLabel(st);
   if (st) renderNbBtn(st); else $("#nbBtn").hidden = true;
   let msg = S.err ? t(S.err) : "";
-  if (!msg && !st) msg = S.notFound ? t("notFound", { c: S.code }) : S.online === false ? t("srvWakeRoom") : t("connectingRoom");
+  if (!msg && !st) msg = S.notFound ? t("notFound", { c: S.code }) : S.online === false && !isP2PCode(S.code) ? t("srvWakeRoom") : t("connectingRoom");
   if (!msg && S.stale) msg = t("stale");
   if (!msg && st && mySeat(st) < 0) msg = activeSeats(st).length >= MAX_PLAYERS ? t("full") : t("entering");
   const gm = $("#gameMsg"); gm.textContent = msg || ""; gm.hidden = !msg;
@@ -1968,6 +2003,7 @@ function renderLobby(st){
       <div class="code" role="text" aria-label="${esc(t("codeLabel"))} ${esc(S.code.split("").join(" "))}">${S.code.split("").map(c => `<span>${esc(c)}</span>`).join("")}</div>
       <button type="button" class="btn ghost sm" data-act="copy">${esc(t("copyCode"))}</button>
       <p class="hint">${esc(t("lobbyHint"))}</p>
+      ${serverUrl() ? `<p class="hint">${esc(t(isP2PCode(S.code) ? "lobbyConnP2p" : "lobbyConnSrv"))}</p>` : ""}
     </div>
     <div class="panel"><h2>${esc(t("inRoom"))} · ${n}/${MAX_PLAYERS}</h2><ul class="pchips">${people}</ul></div>
     <div class="panel"><h2>${esc(t("settings"))}</h2>${packs}${cfg}<p class="hint">${esc(t("handHint", { p: Math.max(n, MIN_PLAYERS), h: handSize(n, gameWhiteCount(st)) }))}</p></div>
@@ -2362,7 +2398,8 @@ function bind(){
   codeIn.addEventListener("input", () => { codeIn.value = codeIn.value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 4); });
   codeIn.addEventListener("keydown", e => { if (e.key === "Enter") $("#joinBtn").click(); });
   $("#createBtn").addEventListener("click", () => {
-    const busy = new Set(S.openRooms.map(r => r.c)); let c = genCode(); while (busy.has(c)) c = genCode();
+    const p2p = connMode() === "p2p";
+    const busy = new Set(S.openRooms.map(r => r.c)); let c = genCode(p2p); while (busy.has(c)) c = genCode(p2p);
     enterRoom(c, nameIn.value, "create");
   });
   $("#joinBtn").addEventListener("click", () => enterRoom(codeIn.value, nameIn.value, "join"));
@@ -2404,6 +2441,7 @@ function bind(){
     else if (a === "fb-send") fbSend();
     else if (a === "fb-again") { $("#fbDone").hidden = true; $("#fbForm").hidden = false; fbRender(); }
     else if (a === "pr-open") prOpen();
+    else if (a === "conn") { store("cxc:conn", el.dataset.v === "p2p" ? "p2p" : "srv"); renderConn(); }
     else if (a === "pr-pack") prTogglePack(el.dataset.p);
     else if (a === "pack") hostDo("pack", el.dataset.p);
     else if (a === "pr-close") prClose();
@@ -2540,7 +2578,7 @@ function createWsRoom(url){
 // al que llega, cuando cambia y cada P2P_RESEND_MS por si se perdió algún mensaje.
 const P2P_APP = "cartas-contra-el-cliente";
 const P2P_RESEND_MS = 15000;
-function createP2pRoom(lib){
+function createP2pRoom(lib, withLobby = true){
   const uid = myUid();
   const me = lib.selfId;
   const cfg = { appId: P2P_APP };
@@ -2589,14 +2627,14 @@ function createP2pRoom(lib){
   }
   // Al volver a la pestaña (móvil dormido), reenvía la presencia a todas las salas
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") for (const st of rooms.values()) st.send(); });
+  const join = name => {
+    if (!/^[a-z0-9][a-z0-9_.-]{0,47}$/.test(name)) return Promise.reject({ code: "invalid_argument" });
+    const have = rooms.get(name);
+    return Promise.resolve(have ? have.api : state(name).api);
+  };
+  if (!withLobby) return { join };   // las salas abiertas ya se anuncian por el servidor
   const lobby = state("__lobby");
-  return Object.assign({}, lobby.api, {
-    join(name){
-      if (!/^[a-z0-9][a-z0-9_.-]{0,47}$/.test(name)) return Promise.reject({ code: "invalid_argument" });
-      const have = rooms.get(name);
-      return Promise.resolve(have ? have.api : state(name).api);
-    },
-  });
+  return Object.assign({}, lobby.api, { join });
 }
 async function getRoom(){
   if (window.claude && typeof window.claude.use === "function") {
