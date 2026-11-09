@@ -1353,6 +1353,10 @@ const BLANK = 1295;            // "zz": carta en blanco
 const MAX_PLAYERS = 20;
 const MIN_PLAYERS = 2;         // cliente + al menos una persona que le envíe propuestas
 const RES_MS = 9000;           // tiempo mostrando el ganador
+const GRACE_MS = 45000;        // a quien se desconecta se le sigue esperando este tiempo antes de seguir sin él
+const CZAR_GONE_MS = 60000;    // sin cliente durante este tiempo, se elige una propuesta al azar
+// Visto por última vez (según el anfitrión): presente ahora o hace menos de GRACE_MS
+const recentlySeen = k => !!S.seenAt && Date.now() - (S.seenAt[k] || 0) < GRACE_MS;
 const TAKEOVER_MS = 10000;     // sin anfitrión durante este tiempo -> otro toma el relevo
 const HB_MS = 4000;            // latido del anfitrión: cada jugador repite el último que ha visto (hs)
 // El latido es [época, n]; "a" es más nuevo que "b" si es de una época mayor o tiene un n mayor
@@ -1534,6 +1538,7 @@ function becomeHost(base){
   const st = clone(base);
   st.ep = (st.ep || 0) + 1; st.h = S.me.key;
   S.st = st; S.isHost = true; S.stale = false; S.hostGoneAt = 0; S.czarGoneAt = 0; S.hbAt = 0;
+  S.seenAt = {}; for (const p of st.pl) S.seenAt[p.k] = Date.now();   // margen para que todos vuelvan a conectar
   if (st.ph === "res") S.resAt = Date.now() - RES_MS + 4000;
   publish(); hostSync();
 }
@@ -1600,6 +1605,8 @@ function hostSync(){
   if (!S.isHost || !S.st || !S.nroom) return;
   const st = S.st; let ch = false;
   const pres = presenceMap();
+  const now = Date.now(); S.seenAt = S.seenAt || {};
+  for (const k of pres.keys()) S.seenAt[k] = now;
   const inGame = st.ph !== "lobby" && st.ph !== "end";
   if (st.ph === "lobby") { const keep = st.pl.filter(p => pres.has(p.k)); if (keep.length !== st.pl.length) { st.pl = keep; ch = true; } }
   for (const [k, pr] of pres) {
@@ -1638,13 +1645,14 @@ function hostSync(){
         if (ok) { st.sb[i] = [encList(ids), nBlank ? text : ""]; p.h = encList(hand.filter(c => !ids.includes(c))); if (nBlank) p.b--; ch = true; }
       }
     }
-    const waiting = activeSeats(st).filter(i => i !== st.cz && pres.has(st.pl[i].k) && !st.sb[i]);
+    // Se espera también a quien se ha desconectado hace poco: así una caída corta no deja a nadie fuera de la ronda
+    const waiting = activeSeats(st).filter(i => i !== st.cz && (pres.has(st.pl[i].k) || recentlySeen(st.pl[i].k)) && !st.sb[i]);
     if (Object.keys(st.sb).length > 0 && waiting.length === 0) { toJudge(st); ch = true; }
   } else if (st.ph === "judge") {
     const cz = st.pl[st.cz]; const pr = cz && pres.get(cz.k);
     if (pr && pr.rev && pr.rev.r === st.r && Number.isInteger(pr.rev.n) && !allShown(st) && pr.rev.n > st.rn) { st.rn = Math.min(st.rv.length + 1, pr.rev.n); ch = true; }
     if (pr && pr.pick && pr.pick.r === st.r && allShown(st) && Number.isInteger(pr.pick.i) && pr.pick.i >= 0 && pr.pick.i < st.rv.length) { award(st, st.rv[pr.pick.i], false); ch = true; }
-    else if (!pr || cz.x) { if (!S.czarGoneAt) S.czarGoneAt = Date.now(); else if (Date.now() - S.czarGoneAt > 25000 && st.rv.length) { award(st, st.rv[Math.floor(Math.random() * st.rv.length)], true); ch = true; } }
+    else if (!pr || cz.x) { if (!S.czarGoneAt) S.czarGoneAt = Date.now(); else if (Date.now() - S.czarGoneAt > CZAR_GONE_MS && st.rv.length) { award(st, st.rv[Math.floor(Math.random() * st.rv.length)], true); ch = true; } }
     else S.czarGoneAt = 0;
   } else if (st.ph === "res") {
     if (!S.resAt) S.resAt = Date.now();

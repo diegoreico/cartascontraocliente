@@ -1,0 +1,10 @@
+# Servidor de salas (server.js) en Render: https://render.com
+# En Render: New → Blueprint → elige este repositorio. Usa el Dockerfile y el plan gratuito.
+# Después pon la dirección wss://<nombre>.onrender.com/ws en <meta name="cxc-server"> de public/index.html.
+services:
+  - type: web
+    name: cartas-contra-el-cliente
+    runtime: docker
+    plan: free
+    healthCheckPath: /healthz
+    autoDeploy: true

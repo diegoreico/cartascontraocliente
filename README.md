@@ -62,6 +62,17 @@ Limitaciones del modo sin servidor:
 - Si el anfitrión cierra la página, el relevo tarda unos 20 segundos (unos 8 con servidor).
 - La sala de espera (la lista de salas abiertas) es común a todo el que abra la página.
 
+### Servidor en Render
+
+Con muchas personas (más de 6 u 8) o desde redes distintas, el modo sin servidor se vuelve inestable: cada navegador mantiene una conexión directa con todos los demás y algunas fallan. El modo con servidor es mucho más estable, porque cada navegador solo se conecta al servidor.
+
+El repositorio trae `render.yaml` para desplegar `server.js` gratis en [Render](https://render.com), que admite WebSocket:
+
+1. En Render: *New → Blueprint* y elige este repositorio. Usa el `Dockerfile` y el plan gratuito.
+2. Cuando esté desplegado, copia su dirección (`https://<nombre>.onrender.com`) y pon `wss://<nombre>.onrender.com/ws` en `<meta name="cxc-server">` de `public/index.html`.
+
+En el plan gratuito el servidor se duerme tras 15 minutos sin uso y tarda unos 30–60 segundos en despertar: la primera persona que entre verá "Conectando…" un rato.
+
 ## GitHub Pages
 
 El workflow `.github/workflows/pages.yml` publica la carpeta `public/` en GitHub Pages en cada push a `main` (o a mano desde la pestaña *Actions*). Para activarlo, en el repositorio ve a *Settings → Pages* y en *Source* elige **GitHub Actions**. La página queda en `https://<usuario>.github.io/cartascontraocliente/`.
