@@ -108,6 +108,9 @@ label{font-weight:700;font-size:14px}
 .chip{appearance:none;border:1px solid var(--line);background:transparent;color:var(--fg);border-radius:99px;padding:7px 12px;font:600 14px/1 var(--f-body);cursor:pointer}
 .chip[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
 .two{display:grid;gap:14px}
+/* Crear / entrar: misma altura, con el botón y el código abajo y sin estirarse */
+.two > .panel{display:flex;flex-direction:column}
+.two > .panel > :last-child{margin-top:auto}
 .join-row{display:flex;gap:8px}
 .join-row input{font:600 22px/1 var(--f-mono);letter-spacing:.3em;text-transform:uppercase;text-align:center}
 .join-row .btn{flex:none}
@@ -371,6 +374,7 @@ button.fb-opt:hover{outline:2px solid var(--accent);outline-offset:2px}
         </div>
         <div class="panel">
           <h2 data-i18n="joinTitle">Entrar con código</h2>
+          <p class="hint" data-i18n="joinHint">Escribe el código de cuatro letras que te han pasado.</p>
           <label for="codeIn" class="sr-only" data-i18n="codeLabel">Código de sala</label>
           <div class="join-row">
             <input id="codeIn" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCD">
@@ -945,6 +949,7 @@ const TX = {
   createTitle: ["Crear una sala", "Crear unha sala", "Criar uma sala"],
   createHint: ["Te da un código de cuatro letras para compartir con el resto.", "Dáche un código de catro letras para compartir co resto.", "Dá-te um código de quatro letras para partilhares com os outros."],
   createBtn: ["Crear sala", "Crear sala", "Criar sala"],
+  joinHint: ["Escribe el código de cuatro letras que te han pasado.", "Escribe o código de catro letras que che pasaron.", "Escreve o código de quatro letras que te passaram."],
   joinTitle: ["Entrar con código", "Entrar con código", "Entrar com código"],
   codeLabel: ["Código de sala", "Código da sala", "Código da sala"],
   joinBtn: ["Entrar", "Entrar", "Entrar"],
