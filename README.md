@@ -116,15 +116,27 @@ Sin `GITHUB_TOKEN` (o en GitHub Pages, que no ejecuta funciones) el formulario s
 
 Ojo: si el repositorio es público, las sugerencias y reportes también lo son.
 
-### Aprobar o descartar sugerencias
+### Editor de mazos y revisión
 
-Al sugerir una carta se elige la baraja: **Sugerencias de jugadores** (por defecto), **Equipo** o **Cartas contra la Humanidad**. Las cartas escritas en partida van a Sugerencias de jugadores. Esa baraja empieza vacía y no se puede elegir para jugar hasta que tiene cartas negras y blancas.
+En la portada, **Editar mazos** abre el editor:
 
-- **Aprobar:** ponle al issue la etiqueta `aprobada`. El workflow `.github/workflows/cartas-aprobadas.yml` (con `.github/scripts/add-card.js`) añade la carta al final de su baraja en `public/index.html`, sube el cambio a `main` (Vercel lo publica solo), comenta en el issue y lo cierra. Antes de aprobar puedes editar el texto del issue: se usa lo que haya en las líneas que empiezan por `>`, y la baraja de la línea **Baraja** (el id entre comillas invertidas).
+- Se elige un mazo existente o **+ Nuevo mazo** (con nombre y descripción).
+- Se pueden **añadir cartas** de golpe (una por línea; las negras con uno o dos huecos `___`) y, en un mazo existente, **editar** o **quitar** sus cartas.
+- Todo se queda en un borrador (guardado en el navegador) y **Enviar para revisión** crea **un solo issue** con etiqueta `mazo` (y `nuevo-mazo` si es nuevo). El issue trae la lista legible y, al final, un bloque de datos JSON con los cambios.
+
+Las cartas en blanco y las cartas negras propias que se escriben durante una partida siguen llegando como issues sueltos (etiquetas `sugerencia` y `desde-partida`), con la línea **Mazos en uso en la partida**. Por defecto van a *Sugerencias de jugadores*: para mandarlas a otro mazo, cambia el id de la línea **Baraja** antes de aprobar.
+
+Revisión:
+
+- **Aprobar:** ponle al issue la etiqueta `aprobada`. El workflow `.github/workflows/cartas-aprobadas.yml` ejecuta `.github/scripts/apply-cards.js`, que aplica los cambios en `public/index.html`, los sube a `main` (Vercel lo publica solo), comenta en el issue y lo cierra. Antes de aprobar puedes editar el issue: en una sugerencia, el texto citado con `>`; en un mazo, el bloque de datos (borra lo que no quieras aplicar).
 - **Descartar:** cierra el issue como *Not planned*.
-- **Traducciones:** la carta entra con el mismo texto en los tres idiomas, marcada en el código con `// #N: pendiente de traducir`, y el issue recibe la etiqueta `pendiente-de-traducir` (si existe en el repo).
+- **Cartas nuevas y editadas** entran con el mismo texto en los tres idiomas, marcadas en el código con `// #N: pendiente de traducir`, y el issue recibe la etiqueta `pendiente-de-traducir` (si existe en el repo).
+- **Cartas quitadas** se quedan como `null` en su sitio (`// #N: retirada`): los ids de las cartas son posiciones y no deben moverse. El juego no las reparte.
+- **Mazos nuevos** se crean con id `m<número del issue>`, sus listas `DECK_M<n>_BLACK_T` / `DECK_M<n>_WHITE_T` y su nombre en `PACKS`. Aparecen para jugar cuando tienen al menos una carta negra y una blanca.
 
-Para que el workflow pueda subir el cambio, en *Settings → Actions → General → Workflow permissions* tiene que estar permitido escribir (o al menos no estar restringido a solo lectura por la organización).
+No quites desde el editor las cartas que usa la partida de ejemplo (las busca por su texto en español).
+
+Para que el workflow pueda subir el cambio, en *Settings → Actions → General → Workflow permissions* tiene que estar permitido escribir.
 
 ## Cartas negras propias
 

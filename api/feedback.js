@@ -1,20 +1,24 @@
 "use strict";
-// Sugerencias y reportes de cartas desde la web.
+// Sugerencias, reportes y cambios de mazos desde la web.
 // Cada envío se convierte en un issue de GitHub en el repositorio del juego, con etiquetas
-// ("sugerencia" o "reporte", y "carta-negra" o "carta-blanca") para revisarlo allí.
+// ("sugerencia", "reporte" o "mazo", y "carta-negra" o "carta-blanca") para revisarlo allí.
+// Al poner la etiqueta "aprobada", .github/scripts/apply-cards.js aplica las sugerencias y los mazos.
 // En Vercel es una función (/api/feedback); server.js la sirve en la misma ruta.
 // Variables de entorno: GITHUB_TOKEN (obligatoria, con permiso para crear issues en el repo)
 // y FEEDBACK_REPO (opcional, "dueño/repo"; por defecto el de este juego).
 
 const REPO = process.env.FEEDBACK_REPO || "diegoreico/cartascontraocliente";
 const API = process.env.GITHUB_API_URL || "https://api.github.com";
-const MAX_BODY = 8192;
+const MAX_BODY = 65536;             // el editor de mazos puede enviar muchas cartas de una vez
+const DECK_MAX = 60;               // cartas nuevas de cada color, ediciones y retiradas por envío
 const MAX_PER_IP = 30;             // envíos por IP cada 10 minutos (por instancia); en una oficina todos comparten IP
 const LANGS = { es: "español", gl: "gallego", pt: "portugués" };
 const REASONS = { nonsense: "No tiene sentido", dislike: "No me gusta", translation: "Traducción rara", other: "Otro motivo" };
-const LISTS = ["BLACK_T", "WHITE_T", "NAMES", "CAH_BLACK_T", "CAH_WHITE_T", "PLAYER_BLACK_T", "PLAYER_WHITE_T"];
-// Barajas a las que se puede sugerir una carta; por defecto, la de sugerencias de jugadores.
-// .github/scripts/add-card.js lee el id entre comillas invertidas de la línea "Baraja" al aprobarla.
+// Listas de cartas del juego (BLACK_T, WHITE_T, CAH_WHITE_T, DECK_M12_BLACK_T…) y la de nombres
+const LIST_RE = /^(NAMES|[A-Z][A-Z0-9_]{0,40}_T)$/;
+const DECK_ID_RE = /^[a-z0-9]{1,12}$/;
+// Nombres de las barajas fijas; las creadas con el editor mandan su nombre desde la web.
+// apply-cards.js lee el id entre comillas invertidas de la línea "Baraja" al aprobar una sugerencia.
 const DECKS = { jug: "Sugerencias de jugadores", eq: "Equipo", cch: "Cartas contra la Humanidad" };
 // Cartas escritas durante una partida, que el juego envía solo
 const ORIGINS = { blank: "carta en blanco jugada en una partida", black: "carta negra propia creada en una partida" };
@@ -35,9 +39,48 @@ const quiet = s => s.replace(/@/g, "@​").replace(/#(\d)/g, "#​$1");
 const quote = s => quiet(s).split("\n").map(l => "> " + l).join("\n");
 const short = s => { const one = s.replace(/\s+/g, " "); return one.length > 60 ? one.slice(0, 57) + "…" : one; };
 const colorName = c => (c === "black" ? "negra" : "blanca");
+// Texto de una carta: una línea, huecos como ___ y sin ``` (rompería el bloque de datos del issue)
+const cardText = s => clean(s, 200).replace(/\s+/g, " ").replace(/`{3,}/g, "''").replace(/_{2,}/g, "___");
+const cardOk = (txt, black) => { const n = (txt.match(/___/g) || []).length; return txt.length >= 3 && (black ? n >= 1 && n <= 2 : n === 0); };
+const deckName = (id, sent) => DECKS[id] || clean(sent, 40) || id;
+
+// Cambios en un mazo existente o petición de un mazo nuevo (editor de mazos)
+function buildDeck(m, lang, name){
+  const deck = m.deck === "new" ? "new" : typeof m.deck === "string" && DECK_ID_RE.test(m.deck) ? m.deck : null;
+  if (!deck) return null;
+  const newName = cardText(m.name).slice(0, 40), newDesc = cardText(m.desc).slice(0, 160);
+  if (deck === "new" && newName.length < 3) return null;
+  const cards = (arr, black) => [...new Set((Array.isArray(arr) ? arr : []).slice(0, DECK_MAX).map(cardText))].filter(x => cardOk(x, black));
+  const black = cards(m.black, true), white = cards(m.white, false);
+  const ref = x => (x && typeof x === "object" && typeof x.list === "string" && LIST_RE.test(x.list) && x.list !== "NAMES" && Number.isInteger(x.i) && x.i >= 0 && x.i < 10000);
+  const edit = deck === "new" ? [] : (Array.isArray(m.edit) ? m.edit : []).slice(0, DECK_MAX).filter(ref)
+    .map(x => ({ list: x.list, i: x.i, from: cardText(x.from), to: cardText(x.to) })).filter(x => cardOk(x.to, x.list.includes("BLACK")));
+  const remove = deck === "new" ? [] : (Array.isArray(m.remove) ? m.remove : []).slice(0, DECK_MAX).filter(ref).map(x => ({ list: x.list, i: x.i, text: cardText(x.text) }));
+  if (!(black.length + white.length + edit.length + remove.length)) return null;
+  const head = deck === "new"
+    ? [`**Mazo nuevo:** ${quiet(newName)}`, ...(newDesc ? [`**De qué va:** ${quiet(newDesc)}`] : [])]
+    : [`**Mazo:** ${quiet(deckName(deck, m.deckName))} (\`${deck}\`)`];
+  const lines = [...head, `**Idioma:** ${LANGS[lang]}`, `**Enviado por:** ${quiet(name)}`];
+  const section = (title, items) => { if (items.length) lines.push("", `**${title} (${items.length})**`, ...items); };
+  section("Cartas negras nuevas", black.map(x => "- " + quiet(x)));
+  section("Cartas blancas nuevas", white.map(x => "- " + quiet(x)));
+  section("Cartas editadas", edit.map(x => `- \`${x.list}[${x.i}]\`: ~~${quiet(x.from)}~~ → ${quiet(x.to)}`));
+  section("Cartas para quitar", remove.map(x => `- \`${x.list}[${x.i}]\`: ${quiet(x.text)}`));
+  const data = { deck, ...(deck === "new" ? { name: newName, desc: newDesc } : {}), black, white, edit: edit.map(({ list, i, to }) => ({ list, i, to })), remove: remove.map(({ list, i }) => ({ list, i })) };
+  lines.push("", "---",
+    "Para aplicar los cambios, ponle la etiqueta `aprobada`. Para dejar fuera alguno, bórralo antes del bloque de datos de abajo (la lista de arriba es solo para leer). Para descartarlo todo, cierra el issue.",
+    "", "<details><summary>Datos para aplicar los cambios</summary>", "", "```json", JSON.stringify(data, null, 1), "```", "", "</details>");
+  const what = [black.length && `${black.length} negras`, white.length && `${white.length} blancas`, edit.length && `${edit.length} editadas`, remove.length && `${remove.length} para quitar`].filter(Boolean).join(", ");
+  return {
+    title: quiet(deck === "new" ? `Mazo nuevo: ${newName} (${what})` : `Cambios en el mazo ${deckName(deck, m.deckName)}: ${what}`),
+    body: lines.join("\n"),
+    labels: ["mazo", ...(deck === "new" ? ["nuevo-mazo"] : [])],
+  };
+}
 
 function build(m){
   const lang = LANGS[m.lang] ? m.lang : "es";
+  if (m.type === "deck") return buildDeck(m, lang, clean(m.author, 40) || "anónimo");
   const name = clean(m.name, 40) || "anónimo";
   const color = m.color === "black" ? "black" : m.color === "white" ? "white" : null;
   if (!color) return null;
@@ -50,9 +93,12 @@ function build(m){
     if (text.length < 3) return null;
     if (color === "black" ? blanks < 1 || blanks > 2 : blanks > 0) return null;
     const origin = ORIGINS[m.origin] ? m.origin : null;
-    const deck = DECKS[m.deck] ? m.deck : "jug";
-    meta.push(`**Baraja:** ${DECKS[deck]} (\`${deck}\`)`);
+    const deck = typeof m.deck === "string" && DECK_ID_RE.test(m.deck) ? m.deck : "jug";
+    meta.push(`**Baraja:** ${quiet(deckName(deck, m.deckName))} (\`${deck}\`)`);
     if (origin) meta.push(`**Origen:** ${ORIGINS[origin]}`);
+    // Cartas de partida: mazos que se estaban usando, para poder elegir a cuál añadirla
+    const inUse = (Array.isArray(m.inUse) ? m.inUse : []).slice(0, 12).filter(x => x && DECK_ID_RE.test(x.id)).map(x => `${quiet(deckName(x.id, x.name))} (\`${x.id}\`)`);
+    if (inUse.length) meta.push(`**Mazos en uso en la partida:** ${inUse.join(", ")}. Para guardarla en otro, cambia el id de la línea **Baraja** antes de aprobarla.`);
     return {
       title: quiet(`Sugerencia de carta ${colorName(color)}: ${short(text)}`),
       body: [...meta, "", quote(text), "", "---", "Para añadirla al juego, ponle la etiqueta `aprobada` (puedes editar antes el texto). Para descartarla, cierra el issue."].join("\n"),
@@ -63,7 +109,7 @@ function build(m){
     const text = clean(m.text, 300);
     const reason = REASONS[m.reason] ? m.reason : null;
     const ref = m.ref && typeof m.ref === "object" ? m.ref : {};
-    const list = LISTS.includes(ref.list) ? ref.list : null;
+    const list = typeof ref.list === "string" && LIST_RE.test(ref.list) ? ref.list : null;
     const i = Number.isInteger(ref.i) && ref.i >= 0 && ref.i < 10000 ? ref.i : null;
     const comment = clean(m.comment, 500);
     if (!text || !reason) return null;
