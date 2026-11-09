@@ -18,7 +18,7 @@ const MAX_ROOMS_PER_PEER = 16;
 const ROOM_RE = /^(__lobby|[a-z0-9][a-z0-9_.-]{0,47})$/;
 const INDEX_PATH = path.join(__dirname, "public", "index.html");
 // La página servida desde aquí usa este servidor como sala en vez de WebRTC
-const INDEX = Buffer.from(fs.readFileSync(INDEX_PATH, "utf8").replace('<meta name="cxc-server" content="">', '<meta name="cxc-server" content="/ws">'));
+const INDEX = Buffer.from(fs.readFileSync(INDEX_PATH, "utf8").replace(/<meta name="cxc-server" content="[^"]*">/, '<meta name="cxc-server" content="/ws">'));
 const VENDOR = { "/vendor/trystero.mjs": fs.readFileSync(path.join(__dirname, "public", "vendor", "trystero.mjs")) };
 
 const server = http.createServer((req, res) => {
