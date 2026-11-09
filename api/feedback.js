@@ -3,6 +3,8 @@
 // Cada envío se convierte en un issue de GitHub en el repositorio del juego, con etiquetas
 // ("sugerencia", "reporte" o "mazo", y "carta-negra" o "carta-blanca") para revisarlo allí.
 // Al poner la etiqueta "aprobada", .github/scripts/apply-cards.js aplica las sugerencias y los mazos.
+// También recibe los errores del navegador de quien juega (type "error"): un issue por error distinto
+// (etiqueta "error") y, si se repite, un comentario en ese mismo issue.
 // En Vercel es una función (/api/feedback); server.js la sirve en la misma ruta.
 // Variables de entorno: GITHUB_TOKEN (obligatoria, con permiso para crear issues en el repo)
 // y FEEDBACK_REPO (opcional, "dueño/repo"; por defecto el de este juego).
@@ -12,6 +14,8 @@ const API = process.env.GITHUB_API_URL || "https://api.github.com";
 const MAX_BODY = 65536;             // el editor de mazos puede enviar muchas cartas de una vez
 const DECK_MAX = 60;               // cartas nuevas de cada color, ediciones y retiradas por envío
 const MAX_PER_IP = 30;             // envíos por IP cada 10 minutos (por instancia); en una oficina todos comparten IP
+const MAX_ERRORS_PER_IP = 20;      // errores por IP cada 10 minutos, aparte, para no gastar el cupo de sugerencias
+const MAX_ERROR_COMMENTS = 25;     // repeticiones que se apuntan en el issue de un error; después solo se cuentan
 const LANGS = { es: "español", gl: "gallego", pt: "portugués" };
 const REASONS = { nonsense: "No tiene sentido", dislike: "No me gusta", translation: "Traducción rara", other: "Otro motivo" };
 // Listas de cartas del juego (BLACK_T, WHITE_T, CAH_WHITE_T, DECK_M12_BLACK_T…) y la de nombres
@@ -24,11 +28,11 @@ const DECKS = { jug: "Sugerencias de jugadores", eq: "Equipo", cch: "Cartas cont
 const ORIGINS = { blank: "carta en blanco jugada en una partida", black: "carta negra propia creada en una partida" };
 
 const hits = new Map();
-function limited(ip){
-  const now = Date.now();
-  const recent = (hits.get(ip) || []).filter(t => now - t < 600000);
-  if (recent.length >= MAX_PER_IP) { hits.set(ip, recent); return true; }
-  recent.push(now); hits.set(ip, recent);
+function limited(ip, kind = "fb", max = MAX_PER_IP){
+  const now = Date.now(); const key = kind + " " + ip;
+  const recent = (hits.get(key) || []).filter(t => now - t < 600000);
+  if (recent.length >= max) { hits.set(key, recent); return true; }
+  recent.push(now); hits.set(key, recent);
   if (hits.size > 5000) hits.clear();
   return false;
 }
@@ -43,6 +47,37 @@ const colorName = c => (c === "black" ? "negra" : "blanca");
 const cardText = s => clean(s, 200).replace(/\s+/g, " ").replace(/`{3,}/g, "''").replace(/_{2,}/g, "___");
 const cardOk = (txt, black) => { const n = (txt.match(/___/g) || []).length; return txt.length >= 3 && (black ? n >= 1 && n <= 2 : n === 0); };
 const deckName = (id, sent) => DECKS[id] || clean(sent, 40) || id;
+
+// Error en el navegador de alguien: huella para agrupar los iguales, título, cuerpo y comentario de repetición
+const ERROR_KINDS = { error: "Error de JavaScript", promesa: "Promesa rechazada sin capturar", recurso: "No se pudo cargar un recurso" };
+const fence = s => String(s).replace(/`{3,}/g, "''");
+function buildError(m){
+  const kind = ERROR_KINDS[m.kind] ? m.kind : "error";
+  const message = clean(m.message, 300).replace(/\s+/g, " ") || "(sin mensaje)";
+  const source = clean(m.source, 300).replace(/[?#].*$/, "");
+  const line = Number.isInteger(m.line) && m.line >= 0 ? m.line : 0, col = Number.isInteger(m.col) && m.col >= 0 ? m.col : 0;
+  const stack = clean(m.stack, 3000);
+  const where = source ? `${source.replace(/^https?:\/\/[^/]+/, "")}${line ? `:${line}:${col}` : ""}` : "";
+  const fp = require("crypto").createHash("sha1").update([kind, message, source.replace(/^https?:\/\/[^/]+/, ""), line].join("|")).digest("hex").slice(0, 8);
+  const ctx = m.ctx && typeof m.ctx === "object" && !Array.isArray(m.ctx) ? m.ctx : {};
+  const ctxLines = Object.keys(ctx).slice(0, 12).map(k => `- ${clean(k, 20)}: ${quiet(clean(JSON.stringify(ctx[k]), 120))}`);
+  const when = new Date().toISOString().replace("T", " ").slice(0, 19) + " UTC";
+  const ua = clean(m.ua, 300); const page = clean(m.url, 200).replace(/[?#].*$/, "");
+  const lang = LANGS[m.lang] ? LANGS[m.lang] : "";
+  const occurrence = [`**${when}**${lang ? ` · ${lang}` : ""}`, `- Navegador: ${quiet(ua) || "?"}`, ...(page ? [`- Página: ${page}`] : []), ...ctxLines].join("\n");
+  return {
+    fp,
+    issue: {
+      title: quiet(`Error en el navegador [${fp}]: ${short(message)}`),
+      body: [`**Tipo:** ${ERROR_KINDS[kind]}`, `**Mensaje:** ${quiet(message)}`, ...(where ? [`**Dónde:** \`${fence(where)}\``] : []),
+        ...(stack ? ["", "**Pila:**", "", "```", fence(stack), "```"] : []),
+        "", "**Primera vez:**", "", occurrence, "", "---",
+        `Lo ha enviado el juego solo. Si vuelve a pasar, se apunta como comentario en este issue (huella \`${fp}\`). Ciérralo cuando esté arreglado.`].join("\n"),
+      labels: ["error"],
+    },
+    comment: `Ha vuelto a pasar:\n\n${occurrence}`,
+  };
+}
 
 // Cambios en un mazo existente o petición de un mazo nuevo (editor de mazos)
 function buildDeck(m, lang, name){
@@ -149,6 +184,7 @@ module.exports = async function feedback(req, res){
   if (!m || typeof m !== "object" || Array.isArray(m)) return send(res, 400, { error: "bad_request" });
   if (m.hp) return send(res, 200, { ok: true });   // campo trampa: lo rellenan los bots, no las personas
   const ip = String(req.headers["x-forwarded-for"] || (req.socket && req.socket.remoteAddress) || "").split(",")[0].trim();
+  if (m.type === "error") return reportError(m, ip, token, res);
   if (limited(ip)) return send(res, 429, { error: "rate_limited" });
   const issue = build(m);
   if (!issue) return send(res, 400, { error: "invalid" });
@@ -165,4 +201,35 @@ module.exports = async function feedback(req, res){
     return send(res, 502, { error: "upstream" });
   }
 };
+// Llamada a la API de GitHub con el token del juego
+function gh(token, method, url, body){
+  return fetch(`${API}${url}`, {
+    method,
+    headers: { authorization: `Bearer ${token}`, accept: "application/vnd.github+json", "x-github-api-version": "2022-11-28", "content-type": "application/json", "user-agent": "cartas-contra-el-cliente" },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+}
+// Un issue por error distinto: si ya hay uno abierto con la misma huella, se comenta en él
+async function reportError(m, ip, token, res){
+  if (limited(ip, "error", MAX_ERRORS_PER_IP)) return send(res, 429, { error: "rate_limited" });
+  const e = buildError(m);
+  try {
+    const list = await gh(token, "GET", `/repos/${REPO}/issues?labels=error&state=open&per_page=100`);
+    const open = list.ok ? await list.json() : [];
+    const same = Array.isArray(open) && open.find(x => x && typeof x.title === "string" && x.title.includes(`[${e.fp}]`) && !x.pull_request);
+    if (same) {
+      if ((same.comments || 0) >= MAX_ERROR_COMMENTS) return send(res, 200, { ok: true, repeated: true });
+      const r = await gh(token, "POST", `/repos/${REPO}/issues/${same.number}/comments`, { body: e.comment });
+      if (!r.ok) { console.error("feedback: GitHub respondió", r.status, (await r.text()).slice(0, 300)); return send(res, 502, { error: "upstream" }); }
+      return send(res, 201, { ok: true, repeated: true });
+    }
+    const r = await gh(token, "POST", `/repos/${REPO}/issues`, e.issue);
+    if (!r.ok) { console.error("feedback: GitHub respondió", r.status, (await r.text()).slice(0, 300)); return send(res, 502, { error: "upstream" }); }
+    return send(res, 201, { ok: true });
+  } catch (err) {
+    console.error("feedback: no se pudo informar del error", err && err.message);
+    return send(res, 502, { error: "upstream" });
+  }
+}
 module.exports.build = build;
+module.exports.buildError = buildError;

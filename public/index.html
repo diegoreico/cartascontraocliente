@@ -335,6 +335,32 @@ button.fb-opt:hover{outline:2px solid var(--accent);outline-offset:2px}
 </script>
 <script defer src="/_vercel/insights/script.js"></script>
 <script defer src="/_vercel/speed-insights/script.js"></script>
+<script>
+/* Errores en el navegador de quien juega: se envían solos a api/feedback.js (type "error"), que abre un issue
+   por error distinto en GitHub. Va aparte y antes del juego para capturar también los errores del propio juego.
+   El juego añade el contexto (pantalla, fase, jugadores…) con window.cxcErrCtx. */
+(function(){
+  var MAX = 5, seen = {}, sent = 0;   // como mucho 5 errores distintos por carga de página, sin repetir
+  function report(kind, message, source, line, col, stack){
+    try {
+      message = String(message == null ? "" : message).slice(0, 300); source = String(source || "");
+      if (/\/_vercel\//.test(source)) return;   // la analítica de Vercel no existe fuera de Vercel
+      var key = kind + "|" + message + "|" + source + "|" + (line || 0);
+      if (seen[key] || sent >= MAX) return; seen[key] = 1; sent++;
+      var ctx = {}; try { if (window.cxcErrCtx) ctx = window.cxcErrCtx(); } catch (e) {}
+      fetch("api/feedback", { method: "POST", keepalive: true, headers: { "content-type": "application/json" }, body: JSON.stringify({
+        type: "error", kind: kind, message: message, source: source, line: line || 0, col: col || 0, stack: String(stack || "").slice(0, 3000),
+        url: location.origin + location.pathname, ua: navigator.userAgent, lang: document.documentElement.lang || "", ctx: ctx, hp: "" }) }).catch(function(){});
+    } catch (e) {}
+  }
+  window.addEventListener("error", function(e){
+    var el = e.target;
+    if (el && el !== window && el.tagName) report("recurso", "No se pudo cargar <" + el.tagName.toLowerCase() + ">", el.src || el.href || "", 0, 0, "");
+    else report("error", e.message, e.filename, e.lineno, e.colno, e.error && e.error.stack);
+  }, true);
+  window.addEventListener("unhandledrejection", function(e){ var r = e.reason; report("promesa", r && r.message ? r.message : String(r), "", 0, 0, r && r.stack); });
+})();
+</script>
 </head>
 <body>
 <div class="wrap">
@@ -2897,6 +2923,13 @@ async function getRoom(){
   try { return { room: createP2pRoom(await import("./vendor/trystero.mjs")), inClaude: false }; }
   catch (e) { console.warn("p2p", e); return { room: null, inClaude: false }; }
 }
+
+// Contexto para los informes de error del navegador (script de errores del <head>)
+window.cxcErrCtx = () => ({
+  pantalla: ["game", "practice", "demo", "editor", "home"].find(id => { const el = document.getElementById(id); return el && !el.hidden; }) || "",
+  fase: S.st ? S.st.ph : "", ronda: S.st ? S.st.r : 0, jugadores: S.st ? activeSeats(S.st).length : 0, anfitrion: !!S.isHost,
+  conexion: S.code ? (isP2PCode(S.code) ? "p2p" : "servidor") : serverUrl() ? "servidor" : "p2p", conectado: S.online !== false,
+});
 
 function srvWakeNotice(){ const el = $("#srvWake"); if (el) el.hidden = S.online !== false || !S.bootAt || Date.now() - S.bootAt < 1200; }
 
